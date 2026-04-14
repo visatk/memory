@@ -1,29 +1,39 @@
 {
-  "name": "cf",
-  "private": true,
-  "type": "module",
-  "scripts": {
+	"name": "tools",
+	"version": "1.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "npm run build && wrangler dev",
-    "deploy": "npm run build && wrangler deploy"
+    "preview": "npm run build && vite preview",
+    "deploy": "wrangler types && npm run build && wrangler deploy"
   },
-  "dependencies": {
-    "hono": "^4.2.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^6.22.0"
-  },
-  "devDependencies": {
-    "@cloudflare/vite-plugin": "^0.0.1",
-    "@cloudflare/workers-types": "^4.20240405.0",
-    "@tailwindcss/vite": "^4.0.0",
-    "@types/react": "^18.2.66",
-    "@types/react-dom": "^18.2.22",
-    "@vitejs/plugin-react": "^4.2.1",
-    "tailwindcss": "^4.0.0",
-    "typescript": "^5.4.2",
-    "vite": "^5.2.0",
-    "wrangler": "^3.40.0"
-  }
+	"dependencies": {
+		"@marsidev/react-turnstile": "^1.5.0",
+		"@tailwindcss/vite": "^4.2.2",
+		"@hono/zod-validator": "^0.7.6",
+		"react": "^19.2.4",
+		"react-router-dom": "^7.14.0",
+		"drizzle-orm": "^0.45.2",
+		"zod": "^3.24.4",
+		"lucide-react": "^1.8.0",
+		"hono": "^4.12.9",
+		"tailwindcss": "^4.2.2",
+		"react-dom": "^19.2.4"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "^1.31.0",
+		"@types/node": "^22.0.0",
+		"@types/cloudflare-turnstile": "^0.2.2",
+		"@cloudflare/workers-types": "latest",
+		"@types/react": "^19.2.14",
+		"@types/react-dom": "^19.2.3",
+		"@vitejs/plugin-react": "^6.0.1",
+		"typescript": "^6.0.2",
+		"vite": "^8.0.3",
+		"drizzle-kit": "^0.31.10",
+		"tsx": "^4.21.0",
+		"wrangler": "^4.80.0"
+	}
 }
