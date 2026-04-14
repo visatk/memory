@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cf-orange: #F38020;
+  --color-cf-dark: #1C1C1C;
+  --font-sans: 'Inter', system-ui, sans-serif;
+}
+
+@layer utilities {
+  .glass-panel {
+    background-color: rgb(255 255 255 / 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgb(255 255 255 / 0.2);
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  }
+}
