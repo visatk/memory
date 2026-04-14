@@ -6,11 +6,37 @@
   --font-sans: 'Inter', system-ui, sans-serif;
 }
 
+/* Base resets for a premium feel */
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  @apply bg-zinc-50 text-zinc-900 antialiased selection:bg-orange-500/30 selection:text-orange-900 dark:bg-[#0a0a0a] dark:text-zinc-100 dark:selection:text-orange-100;
+}
+
+/* Custom Webkit Scrollbars for a native app feel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-zinc-300 dark:bg-zinc-800 rounded-full border-2 border-transparent bg-clip-padding;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-zinc-400 dark:bg-zinc-700;
+}
+
 @layer utilities {
   .glass-panel {
-    background-color: rgb(255 255 255 / 0.7);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgb(255 255 255 / 0.2);
-    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    @apply bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl border border-zinc-200/50 dark:border-zinc-800/50 shadow-xl;
+  }
+  
+  .glass-nav {
+    @apply bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl border-t border-zinc-200/50 dark:border-zinc-800/50;
   }
 }
