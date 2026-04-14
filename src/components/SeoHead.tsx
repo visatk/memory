@@ -4,7 +4,7 @@ interface SeoProps {
   title: string;
   description: string;
   canonical?: string;
-  isTool?: boolean; // Flag to inject SoftwareApplication JSON-LD
+  isTool?: boolean;
 }
 
 export function SeoHead({ title, description, canonical, isTool = false }: SeoProps) {
@@ -12,25 +12,30 @@ export function SeoHead({ title, description, canonical, isTool = false }: SeoPr
     const fullTitle = `${title} | DevKit Pro`;
     document.title = fullTitle;
     
-    // Manage Meta Description
-    let metaDesc = document.querySelector('meta[name="description"]');
-    if (!metaDesc) {
-      metaDesc = document.createElement('meta');
-      metaDesc.setAttribute('name', 'description');
-      document.head.appendChild(metaDesc);
-    }
-    metaDesc.setAttribute('content', description);
+    const setMetaTag = (attrName: string, attrValue: string, content: string) => {
+      let tag = document.querySelector(`meta[${attrName}="${attrValue}"]`);
+      if (!tag) {
+        tag = document.createElement('meta');
+        tag.setAttribute(attrName, attrValue);
+        document.head.appendChild(tag);
+      }
+      tag.setAttribute('content', content);
+    };
 
-    // Manage Open Graph Title
-    let ogTitle = document.querySelector('meta[property="og:title"]');
-    if (!ogTitle) {
-      ogTitle = document.createElement('meta');
-      ogTitle.setAttribute('property', 'og:title');
-      document.head.appendChild(ogTitle);
-    }
-    ogTitle.setAttribute('content', fullTitle);
+    // Standard SEO
+    setMetaTag('name', 'description', description);
+    
+    // Open Graph (Facebook, LinkedIn, Discord)
+    setMetaTag('property', 'og:title', fullTitle);
+    setMetaTag('property', 'og:description', description);
+    setMetaTag('property', 'og:type', 'website');
+    
+    // Twitter Cards
+    setMetaTag('name', 'twitter:card', 'summary_large_image');
+    setMetaTag('name', 'twitter:title', fullTitle);
+    setMetaTag('name', 'twitter:description', description);
 
-    // Manage JSON-LD Structured Data for Tools
+    // JSON-LD Structured Data
     const scriptId = 'seo-json-ld';
     let scriptTag = document.getElementById(scriptId) as HTMLScriptElement;
     
@@ -41,7 +46,6 @@ export function SeoHead({ title, description, canonical, isTool = false }: SeoPr
         scriptTag.type = 'application/ld+json';
         document.head.appendChild(scriptTag);
       }
-      
       const jsonLd = {
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
@@ -49,17 +53,12 @@ export function SeoHead({ title, description, canonical, isTool = false }: SeoPr
         "operatingSystem": "Web",
         "applicationCategory": "DeveloperApplication",
         "description": description,
-        "offers": {
-          "@type": "Offer",
-          "price": "0",
-          "priceCurrency": "USD"
-        }
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
       };
       scriptTag.text = JSON.stringify(jsonLd);
     } else if (scriptTag) {
       scriptTag.remove();
     }
-
   }, [title, description, canonical, isTool]);
 
   return null;
