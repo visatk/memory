@@ -17,8 +17,8 @@ export default function Forum() {
 
   const fetchThreads = () => {
     fetch('/api/forum/threads')
-      .then(res => res.json())
-      .then(setThreads)
+      .then(res => res.json() as Promise<Thread[]>)
+      .then(data => setThreads(data))
       .catch(console.error);
   };
 
