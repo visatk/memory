@@ -101,8 +101,12 @@ export default function App() {
             to={to} 
             className={({ isActive }) => `flex flex-col items-center justify-center w-full py-2 rounded-xl transition-all ${isActive ? 'text-orange-500' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'}`}
           >
-            <Icon className={`size-5 mb-1 transition-transform ${isActive ? 'scale-110' : 'scale-100'}`} />
-            <span className="text-[10px] font-semibold tracking-wide">{label}</span>
+            {({ isActive }) => (
+              <>
+                <Icon className={`size-5 mb-1 transition-transform ${isActive ? 'scale-110' : 'scale-100'}`} />
+                <span className="text-[10px] font-semibold tracking-wide">{label}</span>
+              </>
+            )}
           </NavLink>
         ))}
       </nav>
