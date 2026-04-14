@@ -12,14 +12,22 @@ type Thread = {
 
 export default function Forum() {
   const [threads, setThreads] = useState<Thread[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isPosting, setIsPosting] = useState(false);
   const [newThread, setNewThread] = useState({ title: '', content: '', author: '' });
 
   const fetchThreads = () => {
+    setIsLoading(true);
     fetch('/api/forum/threads')
       .then(res => res.json() as Promise<Thread[]>)
-      .then(data => setThreads(data))
-      .catch(console.error);
+      .then(data => {
+        setThreads(data);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setIsLoading(false);
+      });
   };
 
   useEffect(() => {
@@ -28,6 +36,8 @@ export default function Forum() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newThread.title.trim() || !newThread.content.trim()) return;
+    
     setIsPosting(true);
     await fetch('/api/forum/threads', {
       method: 'POST',
@@ -40,7 +50,7 @@ export default function Forum() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto md:py-8">
+    <div className="max-w-6xl mx-auto md:py-8 animation-fade-in">
       <SeoHead 
         title="Developer Forum" 
         description="Discuss web development, Cloudflare infrastructure, and testing tools with the community." 
@@ -51,12 +61,24 @@ export default function Forum() {
         <p className="text-lg text-zinc-500 dark:text-zinc-400">Ask questions, share code, and discuss infrastructure.</p>
       </div>
 
-      {/* Reverse stack on mobile: Form first, then threads, but on Desktop Form is right sidebar */}
       <div className="flex flex-col-reverse lg:grid lg:grid-cols-12 gap-8 items-start">
         
-        {/* Threads List */}
+        {/* Threads List with Skeleton Loader */}
         <div className="w-full lg:col-span-8 space-y-4">
-          {threads.length === 0 ? (
+          {isLoading ? (
+            // Skeleton State
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl animate-pulse flex justify-between items-start gap-4">
+                <div className="w-full">
+                  <div className="h-6 bg-zinc-200 dark:bg-zinc-800 rounded-md w-3/4 mb-4"></div>
+                  <div className="flex gap-4">
+                    <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded-md w-16"></div>
+                    <div className="h-4 bg-zinc-200 dark:bg-zinc-800 rounded-md w-24"></div>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : threads.length === 0 ? (
             <div className="p-12 text-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl text-zinc-500 border-dashed">
               <MessageCircle className="size-12 mx-auto mb-4 opacity-20" />
               <p className="text-lg">No threads yet. Be the first to start a discussion!</p>
@@ -66,14 +88,14 @@ export default function Forum() {
               <Link 
                 key={thread.id} 
                 to={`/forum/${thread.id}`}
-                className="group block p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl hover:border-orange-500/50 hover:shadow-lg hover:shadow-orange-500/5 transition-all"
+                className="group block p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl hover:border-orange-500/50 hover:shadow-lg hover:shadow-orange-500/5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
               >
                 <div className="flex justify-between items-start gap-4">
                   <div>
-                    <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100 mb-3 group-hover:text-orange-500 transition-colors">{thread.title}</h3>
+                    <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100 mb-3 group-hover:text-orange-500 transition-colors line-clamp-2">{thread.title}</h3>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-zinc-500">
                       <span className="flex items-center gap-1.5"><MessageCircle className="size-3.5" /> Discuss</span>
-                      <span className="px-2 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-md">By {thread.author}</span>
+                      <span className="px-2 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-md truncate max-w-[120px]">By {thread.author}</span>
                       <span>{new Date(thread.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
@@ -84,7 +106,7 @@ export default function Forum() {
           )}
         </div>
 
-        {/* Create Thread Form - Sticky on Desktop */}
+        {/* Create Thread Form */}
         <div className="w-full lg:col-span-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-sm lg:sticky lg:top-8">
           <h3 className="font-bold text-lg flex items-center gap-2 mb-6">
             <MessageSquarePlus className="size-5 text-orange-500" />
@@ -94,6 +116,7 @@ export default function Forum() {
             <div>
               <input 
                 required
+                minLength={5}
                 type="text" 
                 placeholder="Thread Title"
                 value={newThread.title}
@@ -104,11 +127,12 @@ export default function Forum() {
             <div>
               <textarea 
                 required
+                minLength={10}
                 rows={5}
                 placeholder="What's on your mind? Drop your code or questions..."
                 value={newThread.content}
                 onChange={e => setNewThread({...newThread, content: e.target.value})}
-                className="w-full bg-zinc-50 dark:bg-[#0a0a0a] border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm outline-none resize-none focus:ring-2 focus:ring-orange-500/50 transition-all placeholder:text-zinc-400"
+                className="w-full bg-zinc-50 dark:bg-[#0a0a0a] border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm outline-none resize-none focus:ring-2 focus:ring-orange-500/50 transition-all placeholder:text-zinc-400 custom-scrollbar"
               />
             </div>
             <div>
@@ -121,10 +145,10 @@ export default function Forum() {
               />
             </div>
             <button 
-              disabled={isPosting}
-              className="w-full bg-zinc-900 hover:bg-orange-500 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-orange-500 dark:hover:text-white font-semibold py-4 rounded-xl transition-all disabled:opacity-50 active:scale-[0.98] cursor-pointer"
+              disabled={isPosting || !newThread.title.trim() || !newThread.content.trim()}
+              className="w-full bg-zinc-900 hover:bg-orange-500 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-orange-500 dark:hover:text-white font-semibold py-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-orange-500 dark:focus-visible:ring-offset-zinc-900"
             >
-              {isPosting ? 'Posting to D1...' : 'Post Thread'}
+              {isPosting ? 'Posting to Edge...' : 'Post Thread'}
             </button>
           </form>
         </div>
