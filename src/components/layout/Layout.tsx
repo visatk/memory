@@ -6,10 +6,18 @@ import { Footer } from './Footer';
 
 export function Layout() {
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-zinc-50 dark:bg-[#0a0a0a]">
+    <div className="min-h-screen flex flex-col md:flex-row bg-zinc-50 dark:bg-[#0a0a0a] relative overflow-hidden">
+      {/* Premium Developer Grid Background */}
+      <div className="absolute inset-0 z-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none" 
+           style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)', backgroundSize: '32px 32px' }}>
+      </div>
+      
+      {/* Ambient Glows */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-orange-500/10 dark:bg-orange-500/5 blur-[120px] rounded-full pointer-events-none z-0"></div>
+
       <Sidebar />
       
-      <main className="flex-1 w-full relative pb-24 md:pb-0 flex flex-col min-h-screen">
+      <main className="flex-1 w-full relative z-10 pb-24 md:pb-0 flex flex-col min-h-screen">
         <MobileHeader />
         
         {/* The Outlet renders the current route's element */}
