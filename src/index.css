@@ -6,7 +6,6 @@
   --font-sans: 'Inter', system-ui, sans-serif;
 }
 
-/* Base resets for a premium feel */
 html {
   scroll-behavior: smooth;
   -webkit-tap-highlight-color: transparent;
@@ -16,18 +15,17 @@ body {
   @apply bg-zinc-50 text-zinc-900 antialiased selection:bg-orange-500/30 selection:text-orange-900 dark:bg-[#0a0a0a] dark:text-zinc-100 dark:selection:text-orange-100;
 }
 
-/* Custom Webkit Scrollbars for a native app feel */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
-::-webkit-scrollbar-track {
+.custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
-::-webkit-scrollbar-thumb {
-  @apply bg-zinc-300 dark:bg-zinc-800 rounded-full border-2 border-transparent bg-clip-padding;
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-zinc-300 dark:bg-zinc-800 rounded-full;
 }
-::-webkit-scrollbar-thumb:hover {
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
   @apply bg-zinc-400 dark:bg-zinc-700;
 }
 
@@ -38,5 +36,20 @@ body {
   
   .glass-nav {
     @apply bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl border-t border-zinc-200/50 dark:border-zinc-800/50;
+  }
+
+  .animation-fade-in {
+    animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
