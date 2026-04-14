@@ -28,9 +28,12 @@ export default function Thread() {
 
   const fetchThread = () => {
     fetch(`/api/forum/threads/${id}`)
-      .then(res => res.json())
+      .then(res => res.json() as Promise<ThreadDetail & { error?: string }>)
       .then(data => {
-        if (!data.error) setThread(data);
+        if (!data.error) {
+          // Assert as ThreadDetail since we verified it's not an error
+          setThread(data as ThreadDetail); 
+        }
       })
       .catch(console.error);
   };
