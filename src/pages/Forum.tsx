@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { MessageSquarePlus, MessageCircle, ArrowRight, Search, Flame, Eye, LockKeyhole } from 'lucide-react';
+import { MessageSquarePlus, MessageCircle, Search, Flame, Eye, LockKeyhole } from 'lucide-react';
 import { SeoHead } from '../components/SeoHead';
 import { useAuth } from '../context/AuthContext';
 
