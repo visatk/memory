@@ -5,7 +5,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
 import { sign, verify } from 'hono/jwt';
 import { setCookie, getCookie, deleteCookie } from 'hono/cookie';
-import { users } from '../../db/schema';
+import { users } from '../db/schema';
 import { hashPassword, verifyPassword } from '../utils/crypto';
 
 export const authRouter = new Hono<{ Bindings: { DB: D1Database, JWT_SECRET: string }, Variables: { user: any } }>();
