@@ -18,14 +18,15 @@ export default function Login() {
     setError('');
 
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch('/api/auth/login', { // (or /register)
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }) // (add username for Register)
       });
       
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to login');
+      // Cast the response to expect an optional error string
+      const data = await res.json() as { error?: string };
+      if (!res.ok) throw new Error(data.error || 'Failed to authenticate');
       
       await refreshUser();
       navigate('/forum');
