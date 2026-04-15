@@ -15,7 +15,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "types": ["./worker-configuration.d.ts", "vite/client"]
+    "types": ["./worker-configuration.d.ts", "node", "vite/client"]
   },
   "include": ["src"]
 }
