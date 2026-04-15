@@ -3,7 +3,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import { eq, desc, like, and } from 'drizzle-orm';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { threads, replies } from '../../db/schema';
+import { threads, replies } from '../db/schema';
 import { requireAuth } from './auth';
 
 export const forumRouter = new Hono<{ Bindings: { DB: D1Database }, Variables: { user: any } }>();
