@@ -29,6 +29,7 @@
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "^1.31.0",
 		"@types/node": "^22.0.0",
+		"@faker-js/faker": "^10.4.0",
 		"@types/cloudflare-turnstile": "^0.2.2",
 		"@cloudflare/workers-types": "latest",
 		"@types/react": "^19.2.14",
