@@ -8,7 +8,7 @@ export function MobileNav() {
         <NavLink 
           key={to}
           to={to} 
-          className={({ isActive }) => `flex flex-col items-center justify-center w-full py-2 rounded-xl transition-all ${isActive ? 'text-orange-500' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'}`}
+          className={({ isActive }) => `flex flex-col items-center justify-center w-full py-2 rounded-xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 ${isActive ? 'text-orange-500' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'}`}
         >
           {({ isActive }) => (
             <>
