@@ -2,15 +2,16 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, User, Clock, MessageCircle, Send, Flame, Bold, Italic, Code } from 'lucide-react';
 import { SeoHead } from '../components/SeoHead';
+import { useAuth } from '../context/AuthContext';
 
 type Reply = { id: number; content: string; author: string; upvotes: number; createdAt: string; };
 type ThreadDetail = { id: number; title: string; content: string; category: string; author: string; upvotes: number; views: number; createdAt: string; replies: Reply[]; };
 
 export default function Thread() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [thread, setThread] = useState<ThreadDetail | null>(null);
   const [replyContent, setReplyContent] = useState('');
-  const [replyAuthor, setReplyAuthor] = useState('');
   const [isReplying, setIsReplying] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -48,7 +49,6 @@ export default function Thread() {
     const newText = text.substring(0, start) + prefix + selected + suffix + text.substring(end);
     setReplyContent(newText);
     
-    // Maintain focus
     setTimeout(() => {
       textareaRef.current?.focus();
       textareaRef.current?.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
@@ -57,11 +57,12 @@ export default function Thread() {
 
   const handleReply = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user || !replyContent.trim()) return;
     setIsReplying(true);
     await fetch(`/api/forum/threads/${id}/replies`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: replyContent, author: replyAuthor })
+      body: JSON.stringify({ content: replyContent })
     });
     setReplyContent('');
     setIsReplying(false);
@@ -78,10 +79,10 @@ export default function Thread() {
         <ArrowLeft className="size-4" /> Back to Discussions
       </Link>
 
+      {/* Main Post */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 shadow-sm mb-8 flex gap-6">
-        {/* Thread Voting Sidebar */}
         <div className="hidden sm:flex flex-col items-center gap-2 pt-2">
-          <button onClick={() => handleVote('thread', thread.id)} className="p-2 text-zinc-400 hover:text-orange-500 hover:bg-orange-500/10 rounded-xl transition-all">
+          <button onClick={() => handleVote('thread', thread.id)} className="p-2 text-zinc-400 hover:text-orange-500 hover:bg-orange-500/10 rounded-xl transition-all cursor-pointer">
             <Flame className="size-6" />
           </button>
           <span className="font-bold text-lg text-zinc-900 dark:text-zinc-100">{thread.upvotes}</span>
@@ -100,9 +101,8 @@ export default function Thread() {
               <span className="flex items-center gap-1.5"><Clock className="size-4" /> {new Date(thread.createdAt).toLocaleString()}</span>
             </div>
             
-            {/* Mobile Voting */}
             <div className="sm:hidden flex items-center gap-2">
-              <button onClick={() => handleVote('thread', thread.id)} className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/10 text-orange-600 rounded-lg font-bold">
+              <button onClick={() => handleVote('thread', thread.id)} className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/10 text-orange-600 rounded-lg font-bold cursor-pointer">
                 <Flame className="size-4" /> {thread.upvotes}
               </button>
             </div>
@@ -110,10 +110,11 @@ export default function Thread() {
         </div>
       </div>
 
+      {/* Replies */}
       <div className="space-y-4 mb-10">
         <h3 className="font-bold text-xl flex items-center gap-2 mb-6 ml-2"><MessageCircle className="size-5 text-zinc-400" /> {thread.replies.length} Replies</h3>
         {thread.replies.map(reply => (
-          <div key={reply.id} className="bg-white/50 dark:bg-[#0a0a0a]/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 md:p-6 ml-0 md:ml-8 flex gap-4">
+          <div key={reply.id} className="bg-white/50 dark:bg-[#0a0a0a]/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 md:p-6 ml-0 md:ml-8 flex gap-4 transition-colors hover:border-zinc-300 dark:hover:border-zinc-700">
             <div className="flex-1">
               <p className="text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap text-sm md:text-base leading-relaxed mb-4">{reply.content}</p>
               <div className="flex items-center gap-4 text-xs font-medium text-zinc-500">
@@ -122,43 +123,40 @@ export default function Thread() {
               </div>
             </div>
             <div className="flex flex-col items-center justify-start gap-1">
-               <button onClick={() => handleVote('reply', reply.id)} className="p-1.5 text-zinc-400 hover:text-orange-500 rounded-lg"><Flame className="size-4" /></button>
+               <button onClick={() => handleVote('reply', reply.id)} className="p-1.5 text-zinc-400 hover:text-orange-500 rounded-lg cursor-pointer"><Flame className="size-4" /></button>
                <span className="text-xs font-bold">{reply.upvotes}</span>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Rich-Text Reply Composer */}
+      {/* Protected Reply Composer */}
       <div className="bg-white dark:bg-zinc-900 border border-orange-200 dark:border-orange-900/30 rounded-3xl p-6 md:p-8 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-amber-400"></div>
         <h4 className="font-bold text-lg mb-4">Post a Reply</h4>
         
-        <form onSubmit={handleReply} className="space-y-3">
-          <div className="border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden bg-zinc-50 dark:bg-[#0a0a0a] focus-within:ring-2 focus-within:ring-orange-500/50 transition-all">
-            {/* Formatting Toolbar */}
-            <div className="flex items-center gap-1 px-3 py-2 border-b border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50">
-              <button type="button" onClick={() => insertFormatting('**', '**')} className="p-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-800"><Bold className="size-4" /></button>
-              <button type="button" onClick={() => insertFormatting('*', '*')} className="p-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-800"><Italic className="size-4" /></button>
-              <button type="button" onClick={() => insertFormatting('`', '`')} className="p-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-800"><Code className="size-4" /></button>
+        {user ? (
+          <form onSubmit={handleReply} className="space-y-3">
+            <div className="border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden bg-zinc-50 dark:bg-[#0a0a0a] focus-within:ring-2 focus-within:ring-orange-500/50 transition-all">
+              <div className="flex items-center gap-1 px-3 py-2 border-b border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50">
+                <button type="button" onClick={() => insertFormatting('**', '**')} className="p-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer"><Bold className="size-4" /></button>
+                <button type="button" onClick={() => insertFormatting('*', '*')} className="p-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer"><Italic className="size-4" /></button>
+                <button type="button" onClick={() => insertFormatting('`', '`')} className="p-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer"><Code className="size-4" /></button>
+              </div>
+              <textarea ref={textareaRef} required rows={4} placeholder="Markdown formatting is supported..." value={replyContent} onChange={e => setReplyContent(e.target.value)} className="w-full bg-transparent px-4 py-3 text-sm md:text-base outline-none resize-none placeholder:text-zinc-400" />
             </div>
-            
-            <textarea 
-              ref={textareaRef} required rows={4} placeholder="Markdown formatting is supported..." value={replyContent} onChange={e => setReplyContent(e.target.value)}
-              className="w-full bg-transparent px-4 py-3 text-sm md:text-base outline-none resize-none placeholder:text-zinc-400"
-            />
+            <div className="flex justify-end pt-2">
+              <button disabled={isReplying || !replyContent.trim()} className="flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-3 rounded-xl transition-all disabled:opacity-50 cursor-pointer">
+                <Send className="size-4" /> {isReplying ? 'Sending...' : 'Post Reply'}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="flex flex-col items-center justify-center p-6 bg-zinc-50 dark:bg-[#0a0a0a] rounded-xl border border-zinc-200 dark:border-zinc-800">
+             <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4">Please log in to reply to this thread.</p>
+             <Link to="/login" className="px-6 py-2.5 bg-zinc-900 hover:bg-orange-500 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-orange-500 dark:hover:text-white rounded-lg font-semibold transition-colors shadow-md">Sign In</Link>
           </div>
-          
-          <div className="flex flex-col sm:flex-row gap-4 pt-2">
-            <input 
-              type="text" placeholder="Display Name (Optional)" value={replyAuthor} onChange={e => setReplyAuthor(e.target.value)}
-              className="flex-1 bg-zinc-50 dark:bg-[#0a0a0a] border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500/50"
-            />
-            <button disabled={isReplying || !replyContent.trim()} className="flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-3 rounded-xl transition-all disabled:opacity-50">
-              <Send className="size-4" /> {isReplying ? 'Sending...' : 'Post Reply'}
-            </button>
-          </div>
-        </form>
+        )}
       </div>
     </div>
   );
