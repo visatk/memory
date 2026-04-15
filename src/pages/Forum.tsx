@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { MessageSquarePlus, MessageCircle, ArrowRight, Search, Flame, Eye } from 'lucide-react';
+import { MessageSquarePlus, MessageCircle, ArrowRight, Search, Flame, Eye, LockKeyhole } from 'lucide-react';
 import { SeoHead } from '../components/SeoHead';
+import { useAuth } from '../context/AuthContext';
 
 const CATEGORIES = ['all', 'general', 'showcase', 'help', 'cloudflare'];
 
@@ -16,13 +17,14 @@ type Thread = {
 };
 
 export default function Forum() {
+  const { user } = useAuth();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   
   const [isPosting, setIsPosting] = useState(false);
-  const [newThread, setNewThread] = useState({ title: '', content: '', category: 'general', author: '' });
+  const [newThread, setNewThread] = useState({ title: '', content: '', category: 'general' });
 
   const fetchThreads = useCallback(() => {
     setIsLoading(true);
@@ -43,7 +45,7 @@ export default function Forum() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newThread.title.trim() || !newThread.content.trim()) return;
+    if (!user || !newThread.title.trim() || !newThread.content.trim()) return;
     
     setIsPosting(true);
     await fetch('/api/forum/threads', {
@@ -51,7 +53,7 @@ export default function Forum() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newThread)
     });
-    setNewThread({ title: '', content: '', category: 'general', author: '' });
+    setNewThread({ title: '', content: '', category: 'general' });
     setIsPosting(false);
     fetchThreads();
   };
@@ -88,7 +90,7 @@ export default function Forum() {
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
-                className={`px-5 py-2 rounded-xl text-sm font-semibold capitalize whitespace-nowrap transition-all border ${
+                className={`px-5 py-2.5 rounded-xl text-sm font-semibold capitalize whitespace-nowrap transition-all border ${
                   activeCategory === cat 
                     ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-zinc-100 dark:text-zinc-900 shadow-md' 
                     : 'bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-800 dark:hover:bg-zinc-800'
@@ -102,12 +104,13 @@ export default function Forum() {
           {/* Thread List */}
           <div className="space-y-4">
             {isLoading ? (
-              Array.from({ length: 3 }).map((_, i) => (
+              Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="h-32 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl animate-pulse"></div>
               ))
             ) : threads.length === 0 ? (
               <div className="p-12 text-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl text-zinc-500 border-dashed">
-                <p className="text-lg">No discussions found in this category.</p>
+                <MessageCircle className="size-12 mx-auto mb-4 opacity-20" />
+                <p className="text-lg">No discussions found.</p>
               </div>
             ) : (
               threads.map(thread => (
@@ -144,38 +147,30 @@ export default function Forum() {
           </div>
         </div>
 
-        {/* Compose Thread Sidebar */}
+        {/* Dynamic Sidebar: Compose OR Auth Prompt */}
         <div className="w-full lg:col-span-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-sm lg:sticky lg:top-8">
-          <h3 className="font-bold text-lg flex items-center gap-2 mb-6">
-            <MessageSquarePlus className="size-5 text-orange-500" /> Start Discussion
-          </h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <select 
-              value={newThread.category}
-              onChange={e => setNewThread({...newThread, category: e.target.value})}
-              className="w-full bg-zinc-50 dark:bg-[#0a0a0a] border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500/50 capitalize"
-            >
-              {CATEGORIES.filter(c => c !== 'all').map(cat => <option key={cat} value={cat}>{cat}</option>)}
-            </select>
-            <input 
-              required minLength={5} type="text" placeholder="Thread Title"
-              value={newThread.title} onChange={e => setNewThread({...newThread, title: e.target.value})}
-              className="w-full bg-zinc-50 dark:bg-[#0a0a0a] border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500/50"
-            />
-            <textarea 
-              required minLength={10} rows={5} placeholder="Markdown supported..."
-              value={newThread.content} onChange={e => setNewThread({...newThread, content: e.target.value})}
-              className="w-full bg-zinc-50 dark:bg-[#0a0a0a] border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm outline-none resize-none focus:ring-2 focus:ring-orange-500/50"
-            />
-            <input 
-              type="text" placeholder="Display Name (Optional)"
-              value={newThread.author} onChange={e => setNewThread({...newThread, author: e.target.value})}
-              className="w-full bg-zinc-50 dark:bg-[#0a0a0a] border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500/50"
-            />
-            <button disabled={isPosting || !newThread.title.trim()} className="w-full bg-zinc-900 hover:bg-orange-500 text-white dark:bg-zinc-100 dark:text-zinc-900 font-semibold py-4 rounded-xl transition-all disabled:opacity-50">
-              {isPosting ? 'Posting...' : 'Post Thread'}
-            </button>
-          </form>
+          {user ? (
+            <>
+              <h3 className="font-bold text-lg flex items-center gap-2 mb-6"><MessageSquarePlus className="size-5 text-orange-500" /> Start Discussion</h3>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <select value={newThread.category} onChange={e => setNewThread({...newThread, category: e.target.value})} className="w-full bg-zinc-50 dark:bg-[#0a0a0a] border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500/50 capitalize">
+                  {CATEGORIES.filter(c => c !== 'all').map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                </select>
+                <input required minLength={5} type="text" placeholder="Thread Title" value={newThread.title} onChange={e => setNewThread({...newThread, title: e.target.value})} className="w-full bg-zinc-50 dark:bg-[#0a0a0a] border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500/50" />
+                <textarea required minLength={10} rows={5} placeholder="Markdown supported..." value={newThread.content} onChange={e => setNewThread({...newThread, content: e.target.value})} className="w-full bg-zinc-50 dark:bg-[#0a0a0a] border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm outline-none resize-none focus:ring-2 focus:ring-orange-500/50 custom-scrollbar" />
+                <button disabled={isPosting || !newThread.title.trim()} className="w-full bg-zinc-900 hover:bg-orange-500 text-white dark:bg-zinc-100 dark:text-zinc-900 font-semibold py-4 rounded-xl transition-all disabled:opacity-50 cursor-pointer">
+                  {isPosting ? 'Posting...' : 'Post Thread'}
+                </button>
+              </form>
+            </>
+          ) : (
+            <div className="text-center py-6">
+              <div className="mx-auto size-12 bg-orange-500/10 rounded-full flex items-center justify-center mb-4 border border-orange-500/20"><LockKeyhole className="size-6 text-orange-500" /></div>
+              <h3 className="font-bold text-lg mb-2">Join the Community</h3>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">You must be logged in to create new discussions.</p>
+              <Link to="/login" className="block w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-orange-500/20">Log In to Post</Link>
+            </div>
+          )}
         </div>
         
       </div>
