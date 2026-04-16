@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import { User, LogIn } from 'lucide-react';
 import { Logo } from '../Logo';
 import { useAuth } from '../../context/AuthContext';
@@ -17,12 +17,12 @@ export function MobileHeader() {
         {isLoading ? (
            <div className="size-8 bg-zinc-200 dark:bg-zinc-800 rounded-full animate-pulse"></div>
         ) : user ? (
-           <div className="flex items-center gap-2 pl-3 py-1 pr-1 bg-zinc-100 dark:bg-zinc-800/80 rounded-full border border-zinc-200 dark:border-zinc-700/50">
+           <Link to={`/profile/${user.username}`} className="flex items-center gap-2 pl-3 py-1 pr-1 bg-zinc-100 dark:bg-zinc-800/80 rounded-full border border-zinc-200 dark:border-zinc-700/50 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">
              <span className="text-xs font-semibold text-zinc-900 dark:text-white max-w-[80px] truncate">{user.username}</span>
              <div className="size-7 rounded-full bg-orange-500 flex items-center justify-center shadow-inner shrink-0">
                <User className="size-3.5 text-white" />
              </div>
-           </div>
+           </Link>
         ) : (
            <NavLink to="/login" className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-lg text-xs font-semibold">
              <LogIn className="size-3.5" />
