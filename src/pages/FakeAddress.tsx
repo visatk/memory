@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { SeoHead } from '../components/SeoHead';
 import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
-import { Copy, CreditCard, Check, Sparkles, MapPin, UserSquare2, Phone, Hash, Globe } from 'lucide-react';
+import { Copy, Check, Sparkles, MapPin, UserSquare2, Phone, Hash, Globe } from 'lucide-react';
 import { allFakers } from '@faker-js/faker';
 
 // Comprehensive map of all available Faker.js locales
