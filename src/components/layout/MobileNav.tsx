@@ -3,7 +3,7 @@ import { NAV_ITEMS } from '../../config/navigation';
 
 export function MobileNav() {
   return (
-    <nav className="md:hidden fixed bottom-6 left-4 right-4 z-50 glass-panel rounded-2xl flex items-center justify-around p-2">
+    <nav className="md:hidden sticky top-[56px] z-30 bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl border-b border-zinc-200/50 dark:border-zinc-800/50 flex items-center justify-around px-2 py-1 shadow-sm">
       {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
         <NavLink 
           key={to}
