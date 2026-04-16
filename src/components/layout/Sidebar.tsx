@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { LogIn, LogOut, User } from 'lucide-react';
 import { Logo } from '../Logo';
 import { NAV_ITEMS } from '../../config/navigation';
@@ -44,18 +44,18 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* Auth Footer */}
+      {/* Auth Footer with Clickable Profile Link */}
       <div className="p-4 border-t border-zinc-200 dark:border-zinc-800">
         {isLoading ? (
           <div className="h-10 bg-zinc-200 dark:bg-zinc-800 rounded-xl animate-pulse w-full"></div>
         ) : user ? (
           <div className="flex items-center justify-between gap-2 p-2 lg:px-3 lg:py-2 bg-zinc-100 dark:bg-zinc-800/50 rounded-xl border border-zinc-200 dark:border-zinc-700/50">
-            <div className="flex items-center gap-2 overflow-hidden">
+            <Link to={`/profile/${user.username}`} className="flex items-center gap-2 overflow-hidden hover:opacity-80 transition-opacity">
               <div className="size-8 rounded-full bg-orange-500 flex items-center justify-center shrink-0 shadow-inner">
                 <User className="size-4 text-white" />
               </div>
               <span className="hidden lg:block text-sm font-semibold text-zinc-900 dark:text-white truncate">{user.username}</span>
-            </div>
+            </Link>
             <button onClick={handleLogout} className="hidden lg:flex p-2 text-zinc-400 hover:text-orange-500 transition-colors" title="Logout">
               <LogOut className="size-4" />
             </button>
