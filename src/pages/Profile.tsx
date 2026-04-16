@@ -16,14 +16,19 @@ export default function Profile() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!username) return;
+    
     setIsLoading(true);
     fetch(`/api/auth/profile/${username}`)
-      .then(res => res.json())
+      // FIX: Explicitly cast the JSON response so TypeScript knows what fields exist
+      .then(res => res.json() as Promise<ProfileData & { error?: string }>)
       .then(data => {
         if (data.error) throw new Error(data.error);
-        setProfile(data);
+        
+        // FIX: Tell TypeScript this strictly matches ProfileData now that we passed the error check
+        setProfile(data as ProfileData);
       })
-      .catch(err => setError(err.message))
+      .catch((err: Error) => setError(err.message))
       .finally(() => setIsLoading(false));
   }, [username]);
 
