@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { SeoHead } from '../components/SeoHead';
 import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
-import { Copy, Check, Sparkles, Database, ShieldAlert, Code2, FileJson, FileText } from 'lucide-react';
+import { Copy, Check, Sparkles, Database, ShieldAlert, Code2, FileJson, FileText, CreditCard } from 'lucide-react';
 
 const PRESET_BINS = [
   { name: 'Visa', bin: '424242' },
