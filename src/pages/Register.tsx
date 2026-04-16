@@ -19,15 +19,27 @@ export default function Register() {
     setError('');
 
     try {
-      const res = await fetch('/api/auth/register', { // (or /register)
+      const res = await fetch('/api/auth/register', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }) // (add username for Register)
+        // FIX: Included 'username' in the payload
+        body: JSON.stringify({ username, email, password }) 
       });
       
-      // Cast the response to expect an optional error string
-      const data = await res.json() as { error?: string };
-      if (!res.ok) throw new Error(data.error || 'Failed to authenticate');
+      const data = await res.json() as any;
+      
+      if (!res.ok) {
+        // FIX: Safely parse complex validation error objects from Zod
+        let errMsg = 'Registration failed';
+        if (typeof data.error === 'string') {
+          errMsg = data.error;
+        } else if (data.error?.issues?.[0]?.message) {
+          errMsg = data.error.issues[0].message;
+        } else if (typeof data.error === 'object') {
+          errMsg = 'Invalid input provided';
+        }
+        throw new Error(errMsg);
+      }
       
       await refreshUser();
       navigate('/forum');
