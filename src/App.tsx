@@ -8,6 +8,7 @@ import Forum from './pages/Forum';
 import Thread from './pages/Thread';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Profile from './pages/Profile'; // <-- Imported new Profile page
 
 export default function App() {
   return (
@@ -21,6 +22,8 @@ export default function App() {
           <Route path="forum/:id" element={<Thread />} />
           <Route path="login" element={<Login />} />
           <Route path="register" element={<Register />} />
+          {/* Registered the Profile Route */}
+          <Route path="profile/:username" element={<Profile />} />
         </Route>
       </Routes>
     </AuthProvider>
