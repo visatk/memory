@@ -7,7 +7,7 @@ export function MobileHeader() {
   const { user, isLoading } = useAuth();
 
   return (
-    <header className="md:hidden sticky top-0 z-40 glass-nav flex items-center justify-between p-4">
+    <header className="md:hidden sticky top-0 z-40 bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl border-b border-zinc-200/50 dark:border-zinc-800/50 flex items-center justify-between p-4">
       <NavLink to="/" className="font-bold text-lg tracking-tight flex items-center gap-2">
         <Logo className="size-6 shrink-0" />
         <span className="truncate">DevKit Pro</span>
