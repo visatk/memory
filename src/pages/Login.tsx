@@ -18,15 +18,26 @@ export default function Login() {
     setError('');
 
     try {
-      const res = await fetch('/api/auth/login', { // (or /register)
+      const res = await fetch('/api/auth/login', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }) // (add username for Register)
+        body: JSON.stringify({ email, password }) 
       });
       
-      // Cast the response to expect an optional error string
-      const data = await res.json() as { error?: string };
-      if (!res.ok) throw new Error(data.error || 'Failed to authenticate');
+      const data = await res.json() as any;
+      
+      if (!res.ok) {
+        // FIX: Safely parse complex validation error objects from Zod
+        let errMsg = 'Login failed';
+        if (typeof data.error === 'string') {
+          errMsg = data.error;
+        } else if (data.error?.issues?.[0]?.message) {
+          errMsg = data.error.issues[0].message;
+        } else if (typeof data.error === 'object') {
+          errMsg = 'Invalid credentials format';
+        }
+        throw new Error(errMsg);
+      }
       
       await refreshUser();
       navigate('/forum');
