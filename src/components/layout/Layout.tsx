@@ -17,8 +17,9 @@ export function Layout() {
 
       <Sidebar />
       
-      <main className="flex-1 w-full relative z-10 pb-24 md:pb-0 flex flex-col min-h-screen">
+      <main className="flex-1 w-full relative z-10 flex flex-col min-h-screen">
         <MobileHeader />
+        <MobileNav />
         
         {/* The Outlet renders the current route's element */}
         <div className="flex-1 p-4 md:p-8 lg:p-10 max-w-7xl mx-auto w-full">
@@ -27,8 +28,6 @@ export function Layout() {
         
         <Footer />
       </main>
-
-      <MobileNav />
     </div>
   );
 }
