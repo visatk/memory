@@ -17,9 +17,9 @@ export function Layout() {
 
       <Sidebar />
       
-      <main className="flex-1 w-full relative z-10 flex flex-col min-h-screen">
+      {/* Added pb-28 on mobile to account for the floating bottom nav */}
+      <main className="flex-1 w-full relative z-10 flex flex-col min-h-screen md:pb-0 pb-28">
         <MobileHeader />
-        <MobileNav />
         
         {/* The Outlet renders the current route's element */}
         <div className="flex-1 p-4 md:p-8 lg:p-10 max-w-7xl mx-auto w-full">
@@ -28,6 +28,8 @@ export function Layout() {
         
         <Footer />
       </main>
+
+      <MobileNav />
     </div>
   );
 }
