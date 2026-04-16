@@ -2,20 +2,15 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { drizzle } from 'drizzle-orm/d1';
-import { eq } from 'drizzle-orm';
+import { eq, desc, count } from 'drizzle-orm'; // Added desc & count
 import { sign, verify } from 'hono/jwt';
 import { setCookie, getCookie, deleteCookie } from 'hono/cookie';
-import { users } from '../db/schema';
+import { users, threads, replies } from '../db/schema'; // Added threads & replies
 import { hashPassword, verifyPassword } from '../utils/crypto';
 
 export type AuthEnv = {
-  Bindings: {
-    DB: D1Database;
-    JWT_SECRET: string;
-  };
-  Variables: {
-    user: { id: number; username: string; exp: number; };
-  };
+  Bindings: { DB: D1Database; JWT_SECRET: string; };
+  Variables: { user: { id: number; username: string; exp: number; }; };
 };
 
 export const authRouter = new Hono<AuthEnv>();
@@ -33,36 +28,62 @@ const loginSchema = z.object({
   password: z.string()
 });
 
+// --- NEW PUBLIC PROFILE ROUTE ---
+authRouter.get('/profile/:username', async (c) => {
+  const db = drizzle(c.env.DB);
+  const username = c.req.param('username');
+  
+  // Fetch basic user details safely (omitting password hash)
+  const user = await db.select({ 
+    id: users.id, 
+    username: users.username, 
+    createdAt: users.createdAt 
+  }).from(users).where(eq(users.username, username)).get();
+  
+  if (!user) {
+    return c.json({ error: 'User not found' }, 404);
+  }
+
+  // Fetch recent activity
+  const userThreads = await db.select()
+    .from(threads)
+    .where(eq(threads.authorId, user.id))
+    .orderBy(desc(threads.createdAt))
+    .limit(10);
+  
+  // Aggregate stats efficiently
+  const threadsCountResult = await db.select({ value: count() })
+    .from(threads).where(eq(threads.authorId, user.id)).get();
+    
+  const repliesCountResult = await db.select({ value: count() })
+    .from(replies).where(eq(replies.authorId, user.id)).get();
+
+  return c.json({
+    user,
+    stats: {
+      threads: threadsCountResult?.value || 0,
+      replies: repliesCountResult?.value || 0
+    },
+    recentThreads: userThreads
+  });
+});
+
+// --- EXISTING ROUTES ---
 authRouter.post('/register', zValidator('json', registerSchema), async (c) => {
   const db = drizzle(c.env.DB);
   const { username, email, password } = c.req.valid('json');
 
   const existingUser = await db.select().from(users).where(eq(users.email, email)).get();
-  if (existingUser) {
-    return c.json({ error: 'Email already exists' }, 400);
-  }
+  if (existingUser) return c.json({ error: 'Email already exists' }, 400);
 
-  // Await the new async WebCrypto implementation
   const passwordHash = await hashPassword(password);
   
-  const newUser = await db.insert(users).values({ 
-    username, 
-    email, 
-    passwordHash 
-  }).returning();
+  const newUser = await db.insert(users).values({ username, email, passwordHash }).returning();
   
-  const payload = {
-    id: newUser[0].id,
-    username: newUser[0].username,
-    exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7 
-  };
-  
+  const payload = { id: newUser[0].id, username: newUser[0].username, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7 };
   const token = await sign(payload, getSecret(c), 'HS256');
   
-  setCookie(c, 'auth_token', token, { 
-    httpOnly: true, secure: true, sameSite: 'Strict', path: '/' 
-  });
-
+  setCookie(c, 'auth_token', token, { httpOnly: true, secure: true, sameSite: 'Strict', path: '/' });
   return c.json({ id: newUser[0].id, username: newUser[0].username }, 201);
 });
 
@@ -71,24 +92,14 @@ authRouter.post('/login', zValidator('json', loginSchema), async (c) => {
   const { email, password } = c.req.valid('json');
 
   const user = await db.select().from(users).where(eq(users.email, email)).get();
-  
-  // Await async verification
   if (!user || !(await verifyPassword(password, user.passwordHash))) {
     return c.json({ error: 'Invalid credentials' }, 401);
   }
 
-  const payload = {
-    id: user.id,
-    username: user.username,
-    exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7
-  };
-
+  const payload = { id: user.id, username: user.username, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7 };
   const token = await sign(payload, getSecret(c), 'HS256');
   
-  setCookie(c, 'auth_token', token, { 
-    httpOnly: true, secure: true, sameSite: 'Strict', path: '/' 
-  });
-
+  setCookie(c, 'auth_token', token, { httpOnly: true, secure: true, sameSite: 'Strict', path: '/' });
   return c.json({ id: user.id, username: user.username });
 });
 
@@ -100,7 +111,6 @@ authRouter.post('/logout', (c) => {
 authRouter.get('/me', async (c) => {
   const token = getCookie(c, 'auth_token');
   if (!token) return c.json({ user: null });
-  
   try {
     const decoded = await verify(token, getSecret(c), 'HS256') as { id: number; username: string; exp: number };
     return c.json({ user: { id: decoded.id, username: decoded.username } });
