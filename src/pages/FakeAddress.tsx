@@ -1,18 +1,91 @@
 import { useState } from 'react';
 import { SeoHead } from '../components/SeoHead';
 import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
-import { Copy, Check, Sparkles, MapPin, UserSquare2, Phone, Hash } from 'lucide-react';
+import { Copy, Check, Sparkles, MapPin, UserSquare2, Phone, Hash, Globe } from 'lucide-react';
+import { allFakers } from '@faker-js/faker';
 
-const FIRST_NAMES = ['James', 'Mary', 'Robert', 'Patricia', 'John', 'Jennifer', 'Michael', 'Linda'];
-const LAST_NAMES = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis'];
-const STREETS = ['Maple Ave', 'Oak St', 'Washington Blvd', 'Lakeview Dr', 'Cedar Ln', 'Pine Ct', 'Elm St'];
-const CITIES = ['Springfield', 'Riverside', 'Franklin', 'Greenville', 'Bristol', 'Fairview', 'Salem'];
-const STATES = ['CA', 'TX', 'NY', 'FL', 'IL', 'WA', 'CO'];
+// Comprehensive map of all available Faker.js locales
+const LOCALE_NAMES: Record<string, string> = {
+  af_ZA: "Afrikaans (South Africa)",
+  ar: "Arabic",
+  az: "Azerbaijani",
+  bn_BD: "Bengali (Bangladesh)",
+  cs_CZ: "Czech (Czechia)",
+  cy: "Welsh",
+  da: "Danish",
+  de: "German",
+  de_AT: "German (Austria)",
+  de_CH: "German (Switzerland)",
+  dv: "Maldivian",
+  el: "Greek",
+  en: "English",
+  en_AU: "English (Australia)",
+  en_AU_ocker: "English (Australia Ocker)",
+  en_BORK: "English (Bork)",
+  en_CA: "English (Canada)",
+  en_GB: "English (Great Britain)",
+  en_GH: "English (Ghana)",
+  en_HK: "English (Hong Kong)",
+  en_IE: "English (Ireland)",
+  en_IN: "English (India)",
+  en_NG: "English (Nigeria)",
+  en_US: "English (United States)",
+  en_ZA: "English (South Africa)",
+  eo: "Esperanto",
+  es: "Spanish",
+  es_MX: "Spanish (Mexico)",
+  fa: "Farsi/Persian",
+  fi: "Finnish",
+  fr: "French",
+  fr_BE: "French (Belgium)",
+  fr_CA: "French (Canada)",
+  fr_CH: "French (Switzerland)",
+  fr_LU: "French (Luxembourg)",
+  fr_SN: "French (Senegal)",
+  he: "Hebrew",
+  hr: "Croatian",
+  hu: "Hungarian",
+  hy: "Armenian",
+  id_ID: "Indonesian (Indonesia)",
+  it: "Italian",
+  ja: "Japanese",
+  ka_GE: "Georgian (Georgia)",
+  ko: "Korean",
+  ku_ckb: "Kurdish (Sorani)",
+  ku_kmr_latin: "Kurdish (Kurmanji, Latin)",
+  lv: "Latvian",
+  mk: "Macedonian",
+  nb_NO: "Norwegian (Norway)",
+  ne: "Nepali",
+  nl: "Dutch",
+  nl_BE: "Dutch (Belgium)",
+  pl: "Polish",
+  pt_BR: "Portuguese (Brazil)",
+  pt_PT: "Portuguese (Portugal)",
+  ro: "Romanian",
+  ro_MD: "Romanian (Moldova)",
+  ru: "Russian",
+  sk: "Slovak",
+  sl_SI: "Slovenian (Slovenia)",
+  sr_RS_latin: "Serbian (Serbia, Latin)",
+  sv: "Swedish",
+  ta_IN: "Tamil (India)",
+  th: "Thai",
+  tr: "Turkish",
+  uk: "Ukrainian",
+  ur: "Urdu",
+  uz_UZ_latin: "Uzbek (Uzbekistan, Latin)",
+  vi: "Vietnamese",
+  yo_NG: "Yoruba (Nigeria)",
+  zh_CN: "Chinese (China)",
+  zh_TW: "Chinese (Taiwan)",
+  zu_ZA: "Zulu (South Africa)"
+};
 
 type Identity = {
   fullName: string;
   phone: string;
-  ssn: string;
+  idNumber: string;
   street: string;
   city: string;
   state: string;
@@ -20,34 +93,44 @@ type Identity = {
 };
 
 export default function FakeAddress() {
+  const [selectedLocale, setSelectedLocale] = useState('en_US');
   const [identity, setIdentity] = useState<Identity | null>(null);
   const { copiedText, copy } = useCopyToClipboard();
 
   const generateIdentity = () => {
-    const fn = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
-    const ln = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
-    const ph = `(${Math.floor(Math.random() * 800) + 200}) ${Math.floor(Math.random() * 800) + 200}-${Math.floor(Math.random() * 8999) + 1000}`;
-    const ssnMask = `XXX-XX-${Math.floor(Math.random() * 8999) + 1000}`;
-    
+    // Utilize the prebuilt localized Faker instance dynamically
+    const faker = allFakers[selectedLocale as keyof typeof allFakers];
+    if (!faker) return;
+
+    // Failsafe wrapper for missing locale data (e.g. Hong Kong lacks zip codes, some locales lack states)
+    const safeCall = (fn: () => string, fallback: string = 'N/A') => {
+      try {
+        const res = fn();
+        return res === null || res === undefined || res.trim() === '' ? fallback : res;
+      } catch {
+        return fallback;
+      }
+    };
+
     setIdentity({
-      fullName: `${fn} ${ln}`,
-      phone: ph,
-      ssn: ssnMask,
-      street: `${Math.floor(Math.random() * 9999) + 1} ${STREETS[Math.floor(Math.random() * STREETS.length)]}`,
-      city: CITIES[Math.floor(Math.random() * CITIES.length)],
-      state: STATES[Math.floor(Math.random() * STATES.length)],
-      zip: Math.floor(Math.random() * 89999 + 10000).toString(),
+      fullName: safeCall(() => faker.person.fullName()),
+      phone: safeCall(() => faker.phone.number()),
+      idNumber: safeCall(() => faker.string.alphanumeric({ length: 10, casing: 'upper' })),
+      street: safeCall(() => faker.location.streetAddress()),
+      city: safeCall(() => faker.location.city()),
+      state: safeCall(() => faker.location.state()),
+      zip: safeCall(() => faker.location.zipCode()),
     });
   };
 
   const formattedOutput = identity ? 
-    `${identity.fullName}\n${identity.street}\n${identity.city}, ${identity.state} ${identity.zip}\nPhone: ${identity.phone}\nSSN (Last 4): ${identity.ssn}` : '';
+    `${identity.fullName}\n${identity.street}\n${identity.city}, ${identity.state !== 'N/A' ? identity.state + ' ' : ''}${identity.zip}\nPhone: ${identity.phone}\nID Vector: ${identity.idNumber}` : '';
 
   return (
     <div className="max-w-4xl mx-auto md:py-8 animation-fade-in">
       <SeoHead 
-        title="Mock Identity & Address Generator" 
-        description="Generate realistic full identities including addresses, phone numbers, and secure SSN masks for software testing." 
+        title="Localized Mock Identity Generator" 
+        description="Generate robust, realistic identities including regional addresses and phone numbers for over 70 global locales." 
         isTool={true}
       />
       
@@ -55,12 +138,37 @@ export default function FakeAddress() {
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400 text-[11px] font-bold uppercase tracking-widest mb-4">
           <UserSquare2 className="size-3.5 fill-current" /> Identity Engine
         </div>
-        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-3">Mock Identity Generator</h1>
-        <p className="text-lg text-zinc-500 dark:text-zinc-400">Instantly generate structurally valid identity vectors for form testing and QA.</p>
+        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-3">Global Identity Generator</h1>
+        <p className="text-lg text-zinc-500 dark:text-zinc-400">Instantly generate structurally valid identity vectors and localized addresses across 70+ regions for software testing.</p>
       </div>
 
       <div className="bg-white dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-xl shadow-zinc-200/20 dark:shadow-black/20 p-6 md:p-10">
         
+        {/* Localization Selection Panel */}
+        <div className="mb-8">
+          <label className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">
+            <Globe className="size-4" /> Localization Profile
+          </label>
+          <div className="relative">
+            <select 
+              value={selectedLocale}
+              onChange={(e) => setSelectedLocale(e.target.value)}
+              className="w-full bg-zinc-50 dark:bg-[#0a0a0a] border border-zinc-200 dark:border-zinc-800 rounded-2xl pl-4 pr-10 py-4 text-sm font-semibold outline-none focus:ring-2 focus:ring-orange-500/50 transition-all cursor-pointer shadow-sm appearance-none"
+            >
+              {Object.entries(LOCALE_NAMES)
+                .sort((a, b) => a[1].localeCompare(b[1]))
+                .map(([code, name]) => (
+                  <option key={code} value={code}>
+                    {name} ({code})
+                  </option>
+              ))}
+            </select>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400">
+              <Globe className="size-5" />
+            </div>
+          </div>
+        </div>
+
         {identity ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 bg-zinc-50 dark:bg-[#0a0a0a] rounded-2xl p-6 border border-zinc-100 dark:border-zinc-800">
             <div className="space-y-4">
@@ -73,8 +181,8 @@ export default function FakeAddress() {
                 <div className="text-lg font-medium text-zinc-900 dark:text-white font-mono">{identity.phone}</div>
               </div>
               <div>
-                <label className="flex items-center gap-2 text-xs font-bold text-zinc-400 uppercase mb-1"><Hash className="size-3.5" /> Partial SSN</label>
-                <div className="text-lg font-medium text-zinc-900 dark:text-white font-mono">{identity.ssn}</div>
+                <label className="flex items-center gap-2 text-xs font-bold text-zinc-400 uppercase mb-1"><Hash className="size-3.5" /> ID Vector</label>
+                <div className="text-lg font-medium text-zinc-900 dark:text-white font-mono">{identity.idNumber}</div>
               </div>
             </div>
             <div className="space-y-4 md:border-l border-zinc-200 dark:border-zinc-800 md:pl-6">
@@ -84,18 +192,20 @@ export default function FakeAddress() {
               </div>
               <div>
                 <label className="text-xs font-bold text-zinc-400 uppercase mb-1 block">City & State</label>
-                <div className="text-lg font-medium text-zinc-900 dark:text-white">{identity.city}, {identity.state}</div>
+                <div className="text-lg font-medium text-zinc-900 dark:text-white">
+                  {identity.city}{identity.state !== 'N/A' ? `, ${identity.state}` : ''}
+                </div>
               </div>
               <div>
-                <label className="text-xs font-bold text-zinc-400 uppercase mb-1 block">ZIP Code</label>
+                <label className="text-xs font-bold text-zinc-400 uppercase mb-1 block">Postal Code</label>
                 <div className="text-lg font-medium text-zinc-900 dark:text-white font-mono">{identity.zip}</div>
               </div>
             </div>
           </div>
         ) : (
-          <div className="h-64 flex flex-col items-center justify-center bg-zinc-50 dark:bg-[#0a0a0a] rounded-2xl border border-zinc-100 dark:border-zinc-800 border-dashed mb-8">
+          <div className="h-64 flex flex-col items-center justify-center bg-zinc-50 dark:bg-[#0a0a0a] rounded-2xl border border-zinc-200 dark:border-zinc-800 border-dashed mb-8 transition-colors">
             <UserSquare2 className="size-16 text-zinc-300 dark:text-zinc-700 mb-4" />
-            <p className="text-zinc-500 font-medium">Click generate to create a new identity vector.</p>
+            <p className="text-zinc-500 font-medium">Click generate to create a localized identity vector.</p>
           </div>
         )}
         
