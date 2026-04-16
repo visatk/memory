@@ -97,7 +97,11 @@ export default function Thread() {
           
           <div className="mt-8 pt-5 border-t border-zinc-100 dark:border-zinc-800/50 flex flex-wrap items-center justify-between gap-4 text-xs font-medium">
             <div className="flex items-center gap-4 text-zinc-500">
-              <span className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 rounded-lg"><User className="size-4 text-orange-500" /> <span className="text-zinc-900 dark:text-zinc-100">{thread.author}</span></span>
+              {/* Added Profile Link around Author tag */}
+              <Link to={`/profile/${thread.author}`} className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors px-3 py-1.5 rounded-lg">
+                <User className="size-4 text-orange-500" /> 
+                <span className="text-zinc-900 dark:text-zinc-100">{thread.author}</span>
+              </Link>
               <span className="flex items-center gap-1.5"><Clock className="size-4" /> {new Date(thread.createdAt).toLocaleString()}</span>
             </div>
             
@@ -117,8 +121,12 @@ export default function Thread() {
           <div key={reply.id} className="bg-white/50 dark:bg-[#0a0a0a]/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 md:p-6 ml-0 md:ml-8 flex gap-4 transition-colors hover:border-zinc-300 dark:hover:border-zinc-700">
             <div className="flex-1">
               <p className="text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap text-sm md:text-base leading-relaxed mb-4">{reply.content}</p>
-              <div className="flex items-center gap-4 text-xs font-medium text-zinc-500">
-                <span className="flex items-center gap-1.5"><User className="size-3.5 text-zinc-400" /> <span className="text-zinc-800 dark:text-zinc-200">{reply.author}</span></span>
+              <div className="flex items-center gap-4 text-xs font-medium text-zinc-500 group">
+                {/* Added Profile Link around Replier tag */}
+                <Link to={`/profile/${reply.author}`} className="flex items-center gap-1.5 hover:text-orange-500 transition-colors">
+                  <User className="size-3.5 text-zinc-400 group-hover:text-orange-500 transition-colors" /> 
+                  <span className="text-zinc-800 dark:text-zinc-200 group-hover:text-orange-500 transition-colors">{reply.author}</span>
+                </Link>
                 <span className="flex items-center gap-1.5"><Clock className="size-3.5 text-zinc-400" /> {new Date(reply.createdAt).toLocaleDateString()}</span>
               </div>
             </div>
