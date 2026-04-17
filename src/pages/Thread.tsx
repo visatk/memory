@@ -1,19 +1,23 @@
 import { useEffect, useState, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, User, Clock, MessageCircle, Send, Flame, Bold, Italic, Code } from 'lucide-react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, User, Clock, MessageCircle, Send, Flame, Bold, Italic, Code, Pin, LockKeyhole, Trash2, ShieldAlert } from 'lucide-react';
 import { SeoHead } from '../components/SeoHead';
 import { useAuth } from '../context/AuthContext';
 
 type Reply = { id: number; content: string; author: string; upvotes: number; createdAt: string; };
-type ThreadDetail = { id: number; title: string; content: string; category: string; author: string; upvotes: number; views: number; createdAt: string; replies: Reply[]; };
+type ThreadDetail = { id: number; title: string; content: string; category: string; author: string; authorId: number; upvotes: number; views: number; isPinned: boolean; isLocked: boolean; createdAt: string; replies: Reply[]; };
 
 export default function Thread() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [thread, setThread] = useState<ThreadDetail | null>(null);
   const [replyContent, setReplyContent] = useState('');
   const [isReplying, setIsReplying] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const isModerator = user?.role === 'admin' || user?.role === 'moderator';
+  const isAuthor = user?.username === thread?.author;
 
   const fetchThread = () => {
     fetch(`/api/forum/threads/${id}`)
@@ -26,18 +30,29 @@ export default function Thread() {
 
   const handleVote = async (type: 'thread' | 'reply', targetId: number) => {
     if (!thread) return;
-    
-    // Optimistic UI Update
     if (type === 'thread') {
       setThread({ ...thread, upvotes: thread.upvotes + 1 });
     } else {
-      setThread({
-        ...thread,
-        replies: thread.replies.map(r => r.id === targetId ? { ...r, upvotes: r.upvotes + 1 } : r)
-      });
+      setThread({ ...thread, replies: thread.replies.map(r => r.id === targetId ? { ...r, upvotes: r.upvotes + 1 } : r) });
+    }
+    await fetch(`/api/forum/vote/${type}/${targetId}`, { method: 'POST' });
+  };
+
+  const handleModeration = async (action: 'pin' | 'lock' | 'delete') => {
+    if (!thread) return;
+    
+    if (action === 'delete') {
+      if (!confirm('Are you sure you want to permanently delete this thread?')) return;
+      await fetch(`/api/forum/threads/${thread.id}`, { method: 'DELETE' });
+      navigate('/');
+      return;
     }
 
-    await fetch(`/api/forum/vote/${type}/${targetId}`, { method: 'POST' });
+    const res = await fetch(`/api/forum/threads/${thread.id}/${action}`, { method: 'PATCH' });
+    if (res.ok) {
+      const updated = await res.json() as ThreadDetail;
+      setThread({ ...thread, isPinned: updated.isPinned, isLocked: updated.isLocked });
+    }
   };
 
   const insertFormatting = (prefix: string, suffix: string) => {
@@ -48,7 +63,6 @@ export default function Thread() {
     const selected = text.substring(start, end) || 'text';
     const newText = text.substring(0, start) + prefix + selected + suffix + text.substring(end);
     setReplyContent(newText);
-    
     setTimeout(() => {
       textareaRef.current?.focus();
       textareaRef.current?.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
@@ -75,13 +89,31 @@ export default function Thread() {
     <div className="max-w-4xl mx-auto md:py-8 animation-fade-in">
       <SeoHead title={thread.title} description={thread.content.substring(0, 150)} />
       
-      {/* Updated navigation pointer */}
-      <Link to="/" className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 hover:shadow-sm transition-all mb-8">
-        <ArrowLeft className="size-4" /> Back to Discussions
-      </Link>
+      <div className="flex items-center justify-between mb-8">
+        <Link to="/" className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:shadow-sm transition-all">
+          <ArrowLeft className="size-4" /> Back to Discussions
+        </Link>
+        
+        {(isModerator || isAuthor) && (
+          <div className="flex gap-2">
+            {isModerator && (
+              <>
+                <button onClick={() => handleModeration('pin')} className={`p-2 rounded-lg border transition-colors ${thread.isPinned ? 'bg-orange-500/10 border-orange-500/20 text-orange-500' : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-orange-500'}`} title={thread.isPinned ? "Unpin Thread" : "Pin Thread"}>
+                  <Pin className="size-4" />
+                </button>
+                <button onClick={() => handleModeration('lock')} className={`p-2 rounded-lg border transition-colors ${thread.isLocked ? 'bg-red-500/10 border-red-500/20 text-red-500' : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-red-500'}`} title={thread.isLocked ? "Unlock Thread" : "Lock Thread"}>
+                  <LockKeyhole className="size-4" />
+                </button>
+              </>
+            )}
+            <button onClick={() => handleModeration('delete')} className="p-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-500 hover:text-red-500 hover:border-red-500/30 transition-colors" title="Delete Thread">
+              <Trash2 className="size-4" />
+            </button>
+          </div>
+        )}
+      </div>
 
-      {/* Main Post */}
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 md:p-8 shadow-sm mb-8 flex gap-6">
+      <div className={`bg-white dark:bg-zinc-900 border rounded-3xl p-6 md:p-8 shadow-sm mb-8 flex gap-6 ${thread.isPinned ? 'border-orange-500/30' : 'border-zinc-200 dark:border-zinc-800'}`}>
         <div className="hidden sm:flex flex-col items-center gap-2 pt-2">
           <button onClick={() => handleVote('thread', thread.id)} className="p-2 text-zinc-400 hover:text-orange-500 hover:bg-orange-500/10 rounded-xl transition-all cursor-pointer">
             <Flame className="size-6" />
@@ -91,6 +123,8 @@ export default function Thread() {
 
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-4">
+             {thread.isPinned && <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400"><Pin className="size-3" /> Pinned</span>}
+             {thread.isLocked && <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400"><LockKeyhole className="size-3" /> Locked</span>}
              <span className="px-2.5 py-1 bg-orange-500/10 text-orange-600 text-[10px] font-bold uppercase tracking-wider rounded-md">{thread.category}</span>
           </div>
           <h1 className="text-2xl md:text-3xl font-bold mb-6 text-balance leading-tight">{thread.title}</h1>
@@ -104,17 +138,10 @@ export default function Thread() {
               </Link>
               <span className="flex items-center gap-1.5"><Clock className="size-4" /> {new Date(thread.createdAt).toLocaleString()}</span>
             </div>
-            
-            <div className="sm:hidden flex items-center gap-2">
-              <button onClick={() => handleVote('thread', thread.id)} className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/10 text-orange-600 rounded-lg font-bold cursor-pointer">
-                <Flame className="size-4" /> {thread.upvotes}
-              </button>
-            </div>
           </div>
         </div>
       </div>
 
-      {/* Replies */}
       <div className="space-y-4 mb-10">
         <h3 className="font-bold text-xl flex items-center gap-2 mb-6 ml-2"><MessageCircle className="size-5 text-zinc-400" /> {thread.replies.length} Replies</h3>
         {thread.replies.map(reply => (
@@ -137,34 +164,43 @@ export default function Thread() {
         ))}
       </div>
 
-      {/* Protected Reply Composer */}
-      <div className="bg-white dark:bg-zinc-900 border border-orange-200 dark:border-orange-900/30 rounded-3xl p-6 md:p-8 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-amber-400"></div>
-        <h4 className="font-bold text-lg mb-4">Post a Reply</h4>
-        
-        {user ? (
-          <form onSubmit={handleReply} className="space-y-3">
-            <div className="border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden bg-zinc-50 dark:bg-[#0a0a0a] focus-within:ring-2 focus-within:ring-orange-500/50 transition-all">
-              <div className="flex items-center gap-1 px-3 py-2 border-b border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50">
-                <button type="button" onClick={() => insertFormatting('**', '**')} className="p-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer"><Bold className="size-4" /></button>
-                <button type="button" onClick={() => insertFormatting('*', '*')} className="p-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer"><Italic className="size-4" /></button>
-                <button type="button" onClick={() => insertFormatting('`', '`')} className="p-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer"><Code className="size-4" /></button>
+      {thread.isLocked && !isModerator ? (
+         <div className="flex flex-col items-center justify-center p-8 bg-zinc-50 dark:bg-[#0a0a0a] rounded-3xl border border-zinc-200 dark:border-zinc-800 text-center">
+           <ShieldAlert className="size-10 text-zinc-400 mb-3" />
+           <h4 className="font-bold text-lg mb-1">Thread Locked</h4>
+           <p className="text-sm text-zinc-500">A moderator has closed this discussion. No further replies can be added.</p>
+         </div>
+      ) : (
+        <div className="bg-white dark:bg-zinc-900 border border-orange-200 dark:border-orange-900/30 rounded-3xl p-6 md:p-8 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-amber-400"></div>
+          <h4 className="font-bold text-lg mb-4 flex items-center gap-2">
+            Post a Reply {thread.isLocked && <span className="text-xs bg-red-500/10 text-red-500 px-2 py-1 rounded-md uppercase tracking-wider">Moderator Override</span>}
+          </h4>
+          
+          {user ? (
+            <form onSubmit={handleReply} className="space-y-3">
+              <div className="border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden bg-zinc-50 dark:bg-[#0a0a0a] focus-within:ring-2 focus-within:ring-orange-500/50 transition-all">
+                <div className="flex items-center gap-1 px-3 py-2 border-b border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50">
+                  <button type="button" onClick={() => insertFormatting('**', '**')} className="p-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer"><Bold className="size-4" /></button>
+                  <button type="button" onClick={() => insertFormatting('*', '*')} className="p-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer"><Italic className="size-4" /></button>
+                  <button type="button" onClick={() => insertFormatting('`', '`')} className="p-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-800 cursor-pointer"><Code className="size-4" /></button>
+                </div>
+                <textarea ref={textareaRef} required rows={4} placeholder="Markdown formatting is supported..." value={replyContent} onChange={e => setReplyContent(e.target.value)} className="w-full bg-transparent px-4 py-3 text-sm md:text-base outline-none resize-none placeholder:text-zinc-400 custom-scrollbar" />
               </div>
-              <textarea ref={textareaRef} required rows={4} placeholder="Markdown formatting is supported..." value={replyContent} onChange={e => setReplyContent(e.target.value)} className="w-full bg-transparent px-4 py-3 text-sm md:text-base outline-none resize-none placeholder:text-zinc-400" />
+              <div className="flex justify-end pt-2">
+                <button disabled={isReplying || !replyContent.trim()} className="flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-3 rounded-xl transition-all disabled:opacity-50 cursor-pointer">
+                  <Send className="size-4" /> {isReplying ? 'Sending...' : 'Post Reply'}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="flex flex-col items-center justify-center p-6 bg-zinc-50 dark:bg-[#0a0a0a] rounded-xl border border-zinc-200 dark:border-zinc-800">
+               <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4">Please log in to reply to this thread.</p>
+               <Link to="/login" className="px-6 py-2.5 bg-zinc-900 hover:bg-orange-500 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-orange-500 dark:hover:text-white rounded-lg font-semibold transition-colors shadow-md">Sign In</Link>
             </div>
-            <div className="flex justify-end pt-2">
-              <button disabled={isReplying || !replyContent.trim()} className="flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8 py-3 rounded-xl transition-all disabled:opacity-50 cursor-pointer">
-                <Send className="size-4" /> {isReplying ? 'Sending...' : 'Post Reply'}
-              </button>
-            </div>
-          </form>
-        ) : (
-          <div className="flex flex-col items-center justify-center p-6 bg-zinc-50 dark:bg-[#0a0a0a] rounded-xl border border-zinc-200 dark:border-zinc-800">
-             <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-4">Please log in to reply to this thread.</p>
-             <Link to="/login" className="px-6 py-2.5 bg-zinc-900 hover:bg-orange-500 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-orange-500 dark:hover:text-white rounded-lg font-semibold transition-colors shadow-md">Sign In</Link>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
