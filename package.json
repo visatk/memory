@@ -24,7 +24,9 @@
 		"lucide-react": "^1.8.0",
 		"hono": "^4.12.9",
 		"tailwindcss": "^4.2.2",
-		"react-dom": "^19.2.4"
+		"react-dom": "^19.2.4",
+		"react-markdown": "^9.0.1",
+		"remark-gfm": "^4.0.0"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "^1.31.0",
