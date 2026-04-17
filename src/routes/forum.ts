@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { drizzle } from 'drizzle-orm/d1';
-import { eq, desc, like, or, and } from 'drizzle-orm';
+import { eq, desc, like, or, and, sql } from 'drizzle-orm';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { threads, replies } from '../db/schema';
@@ -8,7 +8,6 @@ import { requireAuth } from './auth';
 
 export const forumRouter = new Hono<{ Bindings: { DB: D1Database }, Variables: { user: any } }>();
 
-// Read Threads with dynamic query filtering for frontend searches
 forumRouter.get('/threads', async (c) => {
   const db = drizzle(c.env.DB);
   const q = c.req.query('q');
@@ -45,16 +44,18 @@ forumRouter.get('/threads/:id', async (c) => {
   
   if (!thread) return c.json({ error: 'Not found' }, 404);
   
-  // Non-blocking background analytics update
+  // Non-blocking background analytics update utilizing D1 atomic increments to prevent transaction errors
   c.executionCtx.waitUntil(
-    db.update(threads).set({ views: thread.views + 1 }).where(eq(threads.id, threadId)).execute()
+    db.update(threads)
+      .set({ views: sql`${threads.views} + 1` })
+      .where(eq(threads.id, threadId))
+      .execute()
   );
   
   const threadReplies = await db.select().from(replies).where(eq(replies.threadId, threadId)).orderBy(replies.createdAt);
   return c.json({ ...thread, replies: threadReplies });
 });
 
-// Writing logic
 forumRouter.post('/threads', requireAuth, zValidator('json', z.object({ title: z.string(), content: z.string(), category: z.string() })), async (c) => {
   const db = drizzle(c.env.DB);
   const user = c.get('user');
@@ -74,18 +75,22 @@ forumRouter.post('/threads/:id/replies', requireAuth, zValidator('json', z.objec
   return c.json(result[0], 201);
 });
 
-// Implement missing Vote Route
 forumRouter.post('/vote/:type/:id', async (c) => {
   const db = drizzle(c.env.DB);
   const type = c.req.param('type');
   const id = parseInt(c.req.param('id'));
 
+  // Utilize D1 atomic increments to resolve transactional race conditions during high concurrency
   if (type === 'thread') {
-    const thread = await db.select().from(threads).where(eq(threads.id, id)).get();
-    if (thread) await db.update(threads).set({ upvotes: thread.upvotes + 1 }).where(eq(threads.id, id)).execute();
+    await db.update(threads)
+      .set({ upvotes: sql`${threads.upvotes} + 1` })
+      .where(eq(threads.id, id))
+      .execute();
   } else if (type === 'reply') {
-    const reply = await db.select().from(replies).where(eq(replies.id, id)).get();
-    if (reply) await db.update(replies).set({ upvotes: reply.upvotes + 1 }).where(eq(replies.id, id)).execute();
+    await db.update(replies)
+      .set({ upvotes: sql`${replies.upvotes} + 1` })
+      .where(eq(replies.id, id))
+      .execute();
   }
   
   return c.json({ success: true });
