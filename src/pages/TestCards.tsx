@@ -11,7 +11,6 @@ const PRESET_BINS = [
   { name: 'JCB QA', bin: '352800' }
 ];
 
-// Updated to match the new rich object payload from the backend
 type CardData = {
   network?: string;
   number: string;
@@ -26,7 +25,6 @@ type ExportFormat = 'pipe' | 'json' | 'csv';
 export default function TestCards() {
   const [bin, setBin] = useState('424242');
   const [quantity, setQuantity] = useState<number>(10);
-  // Store the full objects instead of strings
   const [generatedCards, setGeneratedCards] = useState<CardData[]>([]);
   const [metadata, setMetadata] = useState<{ networkDetected: string, vectorLength: number } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -35,7 +33,6 @@ export default function TestCards() {
   
   const { copiedText, copy } = useCopyToClipboard();
 
-  // Real-time network UI detection
   const detectedNetwork = useMemo(() => {
     if (bin.startsWith('34') || bin.startsWith('37')) return 'American Express';
     if (bin.startsWith('4')) return 'Visa';
@@ -62,7 +59,7 @@ export default function TestCards() {
         body: JSON.stringify({ bin, quantity })
       });
       
-      const data = await res.json() as { success?: boolean, cards?: any[], metadata?: any, error?: string };
+      const data = await res.json() as { success?: boolean, cards?: CardData[], metadata?: any, error?: string };
       
       if (!res.ok || !data.success) throw new Error(data.error || 'Failed to execute payload generation.');
       
@@ -77,14 +74,11 @@ export default function TestCards() {
     }
   };
 
-  // Fixed formatting logic to properly map the rich objects
   const formattedOutput = useMemo(() => {
     if (!generatedCards.length) return '';
     
     if (format === 'pipe') {
       return generatedCards.map(card => {
-        // Support both old string array and new object array formats
-        if (typeof card === 'string') return card;
         return card.formattedString || `${card.number}|${card.expMonth}|${card.expYear}|${card.cvv}`;
       }).join('\n');
     }
@@ -92,7 +86,6 @@ export default function TestCards() {
     if (format === 'csv') {
       const header = 'Network,CardNumber,ExpMonth,ExpYear,CVV\n';
       const rows = generatedCards.map(card => {
-        if (typeof card === 'string') return card.replace(/\|/g, ',');
         return `${card.network || 'Unknown'},${card.number},${card.expMonth},${card.expYear},${card.cvv}`;
       }).join('\n');
       return header + rows;
@@ -100,10 +93,6 @@ export default function TestCards() {
     
     if (format === 'json') {
       const objects = generatedCards.map(card => {
-        if (typeof card === 'string') {
-          const [number, expMonth, expYear, cvv] = card.split('|');
-          return { number, expMonth, expYear, cvv };
-        }
         // Remove internal formattedString for clean JSON export
         const { formattedString, ...rest } = card;
         return rest;
@@ -136,7 +125,6 @@ export default function TestCards() {
 
       <div className="bg-white dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-xl shadow-zinc-200/20 dark:shadow-black/20 overflow-hidden">
         
-        {/* Engine Configuration Panel */}
         <div className="p-6 md:p-8 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-[#0a0a0a]/50">
           <div className="flex flex-wrap items-center gap-2 mb-6">
             <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider mr-2">Gateway Presets</span>
@@ -204,7 +192,6 @@ export default function TestCards() {
           )}
         </div>
 
-        {/* Payload Output Panel */}
         <div className="p-6 md:p-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
@@ -220,13 +207,13 @@ export default function TestCards() {
             
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center bg-zinc-100 dark:bg-[#0a0a0a] p-1 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                <button onClick={() => setFormat('pipe')} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${format === 'pipe' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}>
+                <button onClick={() => setFormat('pipe')} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${format === 'pipe' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white cursor-pointer'}`}>
                    Raw
                 </button>
-                <button onClick={() => setFormat('json')} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${format === 'json' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}>
+                <button onClick={() => setFormat('json')} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${format === 'json' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white cursor-pointer'}`}>
                   <FileJson className="size-3.5" /> JSON
                 </button>
-                <button onClick={() => setFormat('csv')} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${format === 'csv' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}>
+                <button onClick={() => setFormat('csv')} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${format === 'csv' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white cursor-pointer'}`}>
                   <FileText className="size-3.5" /> CSV
                 </button>
               </div>
