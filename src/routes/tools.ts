@@ -22,23 +22,36 @@ function getCardNetworkSpecs(bin: string) {
   return { network: 'Unknown/Custom', length: 16, cvvLength: 3 };
 }
 
-// Edge-native cryptographic number generation
-function getSecureRandomDigit(): number {
+/**
+ * Cryptographically secure, unbiased integer generation.
+ * Utilizes rejection sampling to eliminate modulo bias.
+ */
+function getSecureRandomInt(min: number, max: number): number {
+  const range = max - min + 1;
+  const maxValid = 256 - (256 % range);
   const array = new Uint8Array(1);
-  crypto.getRandomValues(array);
-  return array[0] % 10;
+  let rnd: number;
+  
+  do {
+    crypto.getRandomValues(array);
+    rnd = array[0];
+  } while (rnd >= maxValid); // Reject values that cause statistical bias
+  
+  return min + (rnd % range);
 }
 
 function generateLuhnValidNumber(bin: string, totalLength: number): string {
   let cardNumber = bin;
   
+  // Fill entropy preserving space for the check digit
   while (cardNumber.length < totalLength - 1) {
-    cardNumber += getSecureRandomDigit().toString();
+    cardNumber += getSecureRandomInt(0, 9).toString();
   }
 
   let sum = 0;
   let isEven = true; 
   
+  // Calculate check digit based on structurally valid payload length
   for (let i = cardNumber.length - 1; i >= 0; i--) {
     let digit = parseInt(cardNumber.charAt(i), 10);
     if (isEven) {
@@ -59,16 +72,19 @@ toolsRouter.post('/generate-cards', zValidator('json', generateCardsSchema), (c)
   const specs = getCardNetworkSpecs(bin);
   const currentYear = new Date().getFullYear();
   const generatedCards = [];
+  
+  // Prevent buffer overflow by truncating base BIN if it equals or exceeds target network length
   const baseBin = bin.length >= specs.length ? bin.substring(0, specs.length - 1) : bin;
 
   for (let i = 0; i < quantity; i++) {
     const number = generateLuhnValidNumber(baseBin, specs.length);
     
-    // Secure future expiry assignment
-    const month = String((getSecureRandomDigit() % 12) + 1).padStart(2, '0');
-    const year = String(currentYear + (getSecureRandomDigit() % 6)); 
+    // Secure bounds for full calendar compatibility
+    const month = String(getSecureRandomInt(1, 12)).padStart(2, '0');
+    const year = String(currentYear + getSecureRandomInt(0, 5)); 
     
-    const cvv = Array.from({ length: specs.cvvLength }, () => getSecureRandomDigit()).join('');
+    // Dynamic CVV generation strictly adhering to network specifications
+    const cvv = Array.from({ length: specs.cvvLength }, () => getSecureRandomInt(0, 9)).join('');
 
     generatedCards.push({
       network: specs.network,
