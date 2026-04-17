@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
-type User = { id: number; username: string } | null;
+type UserRole = 'admin' | 'moderator' | 'user';
+type User = { id: number; username: string; role: UserRole } | null;
 
 interface AuthState {
   user: User;
@@ -18,7 +19,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshUser = async () => {
     try {
       const res = await fetch('/api/auth/me');
-      // Assert the expected JSON structure
       const data = await res.json() as { user: User };
       setUser(data.user);
     } catch {
