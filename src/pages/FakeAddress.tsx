@@ -1,126 +1,71 @@
 import { useState } from 'react';
 import { SeoHead } from '../components/SeoHead';
 import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
-import { Copy, Check, Sparkles, MapPin, UserSquare2, Phone, Hash, Globe } from 'lucide-react';
-import { allFakers } from '@faker-js/faker';
+import { Copy, Check, Sparkles, MapPin, UserSquare2, Phone, Hash, Globe, Loader2 } from 'lucide-react';
 
-// Comprehensive map of all available Faker.js locales
 const LOCALE_NAMES: Record<string, string> = {
-  af_ZA: "Afrikaans (South Africa)",
-  ar: "Arabic",
-  az: "Azerbaijani",
-  bn_BD: "Bengali (Bangladesh)",
-  cs_CZ: "Czech (Czechia)",
-  cy: "Welsh",
-  da: "Danish",
-  de: "German",
-  de_AT: "German (Austria)",
-  de_CH: "German (Switzerland)",
-  dv: "Maldivian",
-  el: "Greek",
-  en: "English",
-  en_AU: "English (Australia)",
-  en_AU_ocker: "English (Australia Ocker)",
-  en_BORK: "English (Bork)",
-  en_CA: "English (Canada)",
-  en_GB: "English (Great Britain)",
-  en_GH: "English (Ghana)",
-  en_HK: "English (Hong Kong)",
-  en_IE: "English (Ireland)",
-  en_IN: "English (India)",
-  en_NG: "English (Nigeria)",
-  en_US: "English (United States)",
-  en_ZA: "English (South Africa)",
-  eo: "Esperanto",
-  es: "Spanish",
-  es_MX: "Spanish (Mexico)",
-  fa: "Farsi/Persian",
-  fi: "Finnish",
-  fr: "French",
-  fr_BE: "French (Belgium)",
-  fr_CA: "French (Canada)",
-  fr_CH: "French (Switzerland)",
-  fr_LU: "French (Luxembourg)",
-  fr_SN: "French (Senegal)",
-  he: "Hebrew",
-  hr: "Croatian",
-  hu: "Hungarian",
-  hy: "Armenian",
-  id_ID: "Indonesian (Indonesia)",
-  it: "Italian",
-  ja: "Japanese",
-  ka_GE: "Georgian (Georgia)",
-  ko: "Korean",
-  ku_ckb: "Kurdish (Sorani)",
-  ku_kmr_latin: "Kurdish (Kurmanji, Latin)",
-  lv: "Latvian",
-  mk: "Macedonian",
-  nb_NO: "Norwegian (Norway)",
-  ne: "Nepali",
-  nl: "Dutch",
-  nl_BE: "Dutch (Belgium)",
-  pl: "Polish",
-  pt_BR: "Portuguese (Brazil)",
-  pt_PT: "Portuguese (Portugal)",
-  ro: "Romanian",
-  ro_MD: "Romanian (Moldova)",
-  ru: "Russian",
-  sk: "Slovak",
-  sl_SI: "Slovenian (Slovenia)",
-  sr_RS_latin: "Serbian (Serbia, Latin)",
-  sv: "Swedish",
-  ta_IN: "Tamil (India)",
-  th: "Thai",
-  tr: "Turkish",
-  uk: "Ukrainian",
-  ur: "Urdu",
-  uz_UZ_latin: "Uzbek (Uzbekistan, Latin)",
-  vi: "Vietnamese",
-  yo_NG: "Yoruba (Nigeria)",
-  zh_CN: "Chinese (China)",
-  zh_TW: "Chinese (Taiwan)",
-  zu_ZA: "Zulu (South Africa)"
+  af_ZA: "Afrikaans (South Africa)", ar: "Arabic", az: "Azerbaijani", bn_BD: "Bengali (Bangladesh)",
+  cs_CZ: "Czech (Czechia)", cy: "Welsh", da: "Danish", de: "German", de_AT: "German (Austria)",
+  de_CH: "German (Switzerland)", dv: "Maldivian", el: "Greek", en: "English", en_AU: "English (Australia)",
+  en_AU_ocker: "English (Australia Ocker)", en_BORK: "English (Bork)", en_CA: "English (Canada)",
+  en_GB: "English (Great Britain)", en_GH: "English (Ghana)", en_HK: "English (Hong Kong)",
+  en_IE: "English (Ireland)", en_IN: "English (India)", en_NG: "English (Nigeria)",
+  en_US: "English (United States)", en_ZA: "English (South Africa)", eo: "Esperanto",
+  es: "Spanish", es_MX: "Spanish (Mexico)", fa: "Farsi/Persian", fi: "Finnish", fr: "French",
+  fr_BE: "French (Belgium)", fr_CA: "French (Canada)", fr_CH: "French (Switzerland)",
+  fr_LU: "French (Luxembourg)", fr_SN: "French (Senegal)", he: "Hebrew", hr: "Croatian",
+  hu: "Hungarian", hy: "Armenian", id_ID: "Indonesian (Indonesia)", it: "Italian", ja: "Japanese",
+  ka_GE: "Georgian (Georgia)", ko: "Korean", ku_ckb: "Kurdish (Sorani)",
+  ku_kmr_latin: "Kurdish (Kurmanji, Latin)", lv: "Latvian", mk: "Macedonian",
+  nb_NO: "Norwegian (Norway)", ne: "Nepali", nl: "Dutch", nl_BE: "Dutch (Belgium)",
+  pl: "Polish", pt_BR: "Portuguese (Brazil)", pt_PT: "Portuguese (Portugal)", ro: "Romanian",
+  ro_MD: "Romanian (Moldova)", ru: "Russian", sk: "Slovak", sl_SI: "Slovenian (Slovenia)",
+  sr_RS_latin: "Serbian (Serbia, Latin)", sv: "Swedish", ta_IN: "Tamil (India)", th: "Thai",
+  tr: "Turkish", uk: "Ukrainian", ur: "Urdu", uz_UZ_latin: "Uzbek (Uzbekistan, Latin)",
+  vi: "Vietnamese", yo_NG: "Yoruba (Nigeria)", zh_CN: "Chinese (China)",
+  zh_TW: "Chinese (Taiwan)", zu_ZA: "Zulu (South Africa)"
 };
 
 type Identity = {
-  fullName: string;
-  phone: string;
-  idNumber: string;
-  street: string;
-  city: string;
-  state: string;
-  zip: string;
+  fullName: string; phone: string; idNumber: string; street: string;
+  city: string; state: string; zip: string;
 };
 
 export default function FakeAddress() {
   const [selectedLocale, setSelectedLocale] = useState('en_US');
   const [identity, setIdentity] = useState<Identity | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   const { copiedText, copy } = useCopyToClipboard();
 
-  const generateIdentity = () => {
-    // Utilize the prebuilt localized Faker instance dynamically
-    const faker = allFakers[selectedLocale as keyof typeof allFakers];
-    if (!faker) return;
+  const generateIdentity = async () => {
+    setIsGenerating(true);
+    try {
+      // Dynamic import prevents massive upfront bundle size parsing in Vite
+      const { allFakers } = await import('@faker-js/faker');
+      const faker = allFakers[selectedLocale as keyof typeof allFakers];
+      if (!faker) return;
 
-    // Failsafe wrapper for missing locale data (e.g. Hong Kong lacks zip codes, some locales lack states)
-    const safeCall = (fn: () => string, fallback: string = 'N/A') => {
-      try {
-        const res = fn();
-        return res === null || res === undefined || res.trim() === '' ? fallback : res;
-      } catch {
-        return fallback;
-      }
-    };
+      const safeCall = (fn: () => string, fallback: string = 'N/A') => {
+        try {
+          const res = fn();
+          return res === null || res === undefined || res.trim() === '' ? fallback : res;
+        } catch {
+          return fallback;
+        }
+      };
 
-    setIdentity({
-      fullName: safeCall(() => faker.person.fullName()),
-      phone: safeCall(() => faker.phone.number()),
-      idNumber: safeCall(() => faker.string.alphanumeric({ length: 10, casing: 'upper' })),
-      street: safeCall(() => faker.location.streetAddress()),
-      city: safeCall(() => faker.location.city()),
-      state: safeCall(() => faker.location.state()),
-      zip: safeCall(() => faker.location.zipCode()),
-    });
+      setIdentity({
+        fullName: safeCall(() => faker.person.fullName()),
+        phone: safeCall(() => faker.phone.number()),
+        idNumber: safeCall(() => faker.string.alphanumeric({ length: 10, casing: 'upper' })),
+        street: safeCall(() => faker.location.streetAddress()),
+        city: safeCall(() => faker.location.city()),
+        state: safeCall(() => faker.location.state()),
+        zip: safeCall(() => faker.location.zipCode()),
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const formattedOutput = identity ? 
@@ -144,7 +89,6 @@ export default function FakeAddress() {
 
       <div className="bg-white dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-xl shadow-zinc-200/20 dark:shadow-black/20 p-6 md:p-10">
         
-        {/* Localization Selection Panel */}
         <div className="mb-8">
           <label className="flex items-center gap-2 text-xs font-bold text-zinc-500 uppercase tracking-wider mb-3">
             <Globe className="size-4" /> Localization Profile
@@ -212,14 +156,15 @@ export default function FakeAddress() {
         <div className="flex flex-col sm:flex-row gap-4">
           <button 
             onClick={generateIdentity}
-            className="flex-1 flex items-center justify-center gap-2 px-8 py-4 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-base font-bold rounded-2xl hover:bg-orange-500 dark:hover:bg-orange-500 dark:hover:text-white transition-all shadow-md active:scale-[0.98] cursor-pointer"
+            disabled={isGenerating}
+            className="flex-1 flex items-center justify-center gap-2 px-8 py-4 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 text-base font-bold rounded-2xl hover:bg-orange-500 dark:hover:bg-orange-500 dark:hover:text-white transition-all shadow-md active:scale-[0.98] cursor-pointer disabled:opacity-70"
           >
-            <Sparkles className="size-5" />
-            Generate Vector
+            {isGenerating ? <Loader2 className="size-5 animate-spin" /> : <Sparkles className="size-5" />}
+            {isGenerating ? 'Synthesizing...' : 'Generate Vector'}
           </button>
           <button 
             onClick={() => copy(formattedOutput)}
-            disabled={!identity}
+            disabled={!identity || isGenerating}
             className={`flex-1 flex items-center justify-center gap-2 px-8 py-4 text-base font-bold rounded-2xl transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] ${
               copiedText 
                 ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
