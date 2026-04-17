@@ -2,10 +2,10 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { drizzle } from 'drizzle-orm/d1';
-import { eq, desc, count } from 'drizzle-orm'; // Added desc & count
+import { eq, desc, count } from 'drizzle-orm';
 import { sign, verify } from 'hono/jwt';
 import { setCookie, getCookie, deleteCookie } from 'hono/cookie';
-import { users, threads, replies } from '../db/schema'; // Added threads & replies
+import { users, threads, replies } from '../db/schema';
 import { hashPassword, verifyPassword } from '../utils/crypto';
 
 export type AuthEnv = {
@@ -28,12 +28,10 @@ const loginSchema = z.object({
   password: z.string()
 });
 
-// --- NEW PUBLIC PROFILE ROUTE ---
 authRouter.get('/profile/:username', async (c) => {
   const db = drizzle(c.env.DB);
   const username = c.req.param('username');
   
-  // Fetch basic user details safely (omitting password hash)
   const user = await db.select({ 
     id: users.id, 
     username: users.username, 
@@ -44,14 +42,12 @@ authRouter.get('/profile/:username', async (c) => {
     return c.json({ error: 'User not found' }, 404);
   }
 
-  // Fetch recent activity
   const userThreads = await db.select()
     .from(threads)
     .where(eq(threads.authorId, user.id))
     .orderBy(desc(threads.createdAt))
     .limit(10);
   
-  // Aggregate stats efficiently
   const threadsCountResult = await db.select({ value: count() })
     .from(threads).where(eq(threads.authorId, user.id)).get();
     
@@ -68,23 +64,29 @@ authRouter.get('/profile/:username', async (c) => {
   });
 });
 
-// --- EXISTING ROUTES ---
 authRouter.post('/register', zValidator('json', registerSchema), async (c) => {
   const db = drizzle(c.env.DB);
   const { username, email, password } = c.req.valid('json');
 
-  const existingUser = await db.select().from(users).where(eq(users.email, email)).get();
-  if (existingUser) return c.json({ error: 'Email already exists' }, 400);
+  try {
+    const existingEmail = await db.select().from(users).where(eq(users.email, email)).get();
+    if (existingEmail) return c.json({ error: 'Email already registered' }, 400);
+    
+    const existingUsername = await db.select().from(users).where(eq(users.username, username)).get();
+    if (existingUsername) return c.json({ error: 'Username already taken' }, 400);
 
-  const passwordHash = await hashPassword(password);
-  
-  const newUser = await db.insert(users).values({ username, email, passwordHash }).returning();
-  
-  const payload = { id: newUser[0].id, username: newUser[0].username, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7 };
-  const token = await sign(payload, getSecret(c), 'HS256');
-  
-  setCookie(c, 'auth_token', token, { httpOnly: true, secure: true, sameSite: 'Strict', path: '/' });
-  return c.json({ id: newUser[0].id, username: newUser[0].username }, 201);
+    const passwordHash = await hashPassword(password);
+    const newUser = await db.insert(users).values({ username, email, passwordHash }).returning();
+    
+    const payload = { id: newUser[0].id, username: newUser[0].username, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7 };
+    const token = await sign(payload, getSecret(c), 'HS256');
+    
+    setCookie(c, 'auth_token', token, { httpOnly: true, secure: true, sameSite: 'Strict', path: '/' });
+    return c.json({ id: newUser[0].id, username: newUser[0].username }, 201);
+  } catch (err: any) {
+    // Catch edge-case unique constraint breaches during execution
+    return c.json({ error: 'Registration failed due to a system constraint. Please try again.' }, 500);
+  }
 });
 
 authRouter.post('/login', zValidator('json', loginSchema), async (c) => {
