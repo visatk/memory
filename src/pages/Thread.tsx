@@ -75,7 +75,8 @@ export default function Thread() {
     <div className="max-w-4xl mx-auto md:py-8 animation-fade-in">
       <SeoHead title={thread.title} description={thread.content.substring(0, 150)} />
       
-      <Link to="/forum" className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 hover:shadow-sm transition-all mb-8">
+      {/* Updated navigation pointer */}
+      <Link to="/" className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 hover:shadow-sm transition-all mb-8">
         <ArrowLeft className="size-4" /> Back to Discussions
       </Link>
 
@@ -97,7 +98,6 @@ export default function Thread() {
           
           <div className="mt-8 pt-5 border-t border-zinc-100 dark:border-zinc-800/50 flex flex-wrap items-center justify-between gap-4 text-xs font-medium">
             <div className="flex items-center gap-4 text-zinc-500">
-              {/* Added Profile Link around Author tag */}
               <Link to={`/profile/${thread.author}`} className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors px-3 py-1.5 rounded-lg">
                 <User className="size-4 text-orange-500" /> 
                 <span className="text-zinc-900 dark:text-zinc-100">{thread.author}</span>
@@ -122,7 +122,6 @@ export default function Thread() {
             <div className="flex-1">
               <p className="text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap text-sm md:text-base leading-relaxed mb-4">{reply.content}</p>
               <div className="flex items-center gap-4 text-xs font-medium text-zinc-500 group">
-                {/* Added Profile Link around Replier tag */}
                 <Link to={`/profile/${reply.author}`} className="flex items-center gap-1.5 hover:text-orange-500 transition-colors">
                   <User className="size-3.5 text-zinc-400 group-hover:text-orange-500 transition-colors" /> 
                   <span className="text-zinc-800 dark:text-zinc-200 group-hover:text-orange-500 transition-colors">{reply.author}</span>
