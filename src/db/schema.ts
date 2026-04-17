@@ -6,18 +6,21 @@ export const users = sqliteTable('users', {
   username: text('username').notNull().unique(),
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
+  role: text('role', { enum: ['admin', 'moderator', 'user'] }).notNull().default('user'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
 });
 
 export const threads = sqliteTable('threads', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   authorId: integer('author_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  author: text('author').notNull(), // Cached username for fast reads
+  author: text('author').notNull(),
   title: text('title').notNull(),
   content: text('content').notNull(),
   category: text('category').notNull().default('general'),
   upvotes: integer('upvotes').notNull().default(0),
   views: integer('views').notNull().default(0),
+  isPinned: integer('is_pinned', { mode: 'boolean' }).notNull().default(false),
+  isLocked: integer('is_locked', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
 });
 
