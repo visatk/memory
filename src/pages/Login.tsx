@@ -40,7 +40,7 @@ export default function Login() {
       }
       
       await refreshUser();
-      navigate('/forum');
+      navigate('/');
     } catch (err: any) {
       setError(err.message);
     } finally {
