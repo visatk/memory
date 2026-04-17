@@ -42,7 +42,7 @@ export default function Register() {
       }
       
       await refreshUser();
-      navigate('/forum');
+      navigate('/');
     } catch (err: any) {
       setError(err.message);
     } finally {
