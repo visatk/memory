@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { SeoHead } from '../components/SeoHead';
 import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
 import { Copy, Check, Sparkles, Database, ShieldAlert, Code2, FileJson, FileText, CreditCard, Network, AlertCircle } from 'lucide-react';
@@ -11,13 +11,14 @@ const PRESET_BINS = [
   { name: 'JCB QA', bin: '352800' }
 ];
 
+// Updated to match the new rich object payload from the backend
 type CardData = {
-  network: string;
+  network?: string;
   number: string;
   expMonth: string;
   expYear: string;
   cvv: string;
-  formattedString: string;
+  formattedString?: string;
 };
 
 type ExportFormat = 'pipe' | 'json' | 'csv';
@@ -25,6 +26,7 @@ type ExportFormat = 'pipe' | 'json' | 'csv';
 export default function TestCards() {
   const [bin, setBin] = useState('424242');
   const [quantity, setQuantity] = useState<number>(10);
+  // Store the full objects instead of strings
   const [generatedCards, setGeneratedCards] = useState<CardData[]>([]);
   const [metadata, setMetadata] = useState<{ networkDetected: string, vectorLength: number } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -60,13 +62,13 @@ export default function TestCards() {
         body: JSON.stringify({ bin, quantity })
       });
       
-      const data = await res.json() as { success?: boolean, cards?: CardData[], metadata?: any, error?: string };
+      const data = await res.json() as { success?: boolean, cards?: any[], metadata?: any, error?: string };
       
       if (!res.ok || !data.success) throw new Error(data.error || 'Failed to execute payload generation.');
       
       if (data.cards) {
         setGeneratedCards(data.cards);
-        setMetadata(data.metadata);
+        if (data.metadata) setMetadata(data.metadata);
       }
     } catch (err: any) {
       setError(err.message);
@@ -75,23 +77,38 @@ export default function TestCards() {
     }
   };
 
+  // Fixed formatting logic to properly map the rich objects
   const formattedOutput = useMemo(() => {
     if (!generatedCards.length) return '';
     
     if (format === 'pipe') {
-      return generatedCards.map(c => c.formattedString).join('\n');
+      return generatedCards.map(card => {
+        // Support both old string array and new object array formats
+        if (typeof card === 'string') return card;
+        return card.formattedString || `${card.number}|${card.expMonth}|${card.expYear}|${card.cvv}`;
+      }).join('\n');
     }
     
     if (format === 'csv') {
       const header = 'Network,CardNumber,ExpMonth,ExpYear,CVV\n';
-      const rows = generatedCards.map(c => `${c.network},${c.number},${c.expMonth},${c.expYear},${c.cvv}`).join('\n');
+      const rows = generatedCards.map(card => {
+        if (typeof card === 'string') return card.replace(/\|/g, ',');
+        return `${card.network || 'Unknown'},${card.number},${card.expMonth},${card.expYear},${card.cvv}`;
+      }).join('\n');
       return header + rows;
     }
     
     if (format === 'json') {
-      // Remove internal formattedString for clean JSON export
-      const cleanObjects = generatedCards.map(({ formattedString, ...rest }) => rest);
-      return JSON.stringify(cleanObjects, null, 2);
+      const objects = generatedCards.map(card => {
+        if (typeof card === 'string') {
+          const [number, expMonth, expYear, cvv] = card.split('|');
+          return { number, expMonth, expYear, cvv };
+        }
+        // Remove internal formattedString for clean JSON export
+        const { formattedString, ...rest } = card;
+        return rest;
+      });
+      return JSON.stringify(objects, null, 2);
     }
     
     return '';
@@ -192,7 +209,7 @@ export default function TestCards() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
               <h3 className="font-bold text-lg flex items-center gap-2">
-                <Code2 className="size-5 text-orange-500" /> Output Buffer
+                <Code2 className="size-5 text-orange-500" /> Generated Payload
               </h3>
               {metadata && (
                 <span className="hidden md:flex px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 text-xs font-bold uppercase tracking-wider rounded-md border border-zinc-200 dark:border-zinc-700">
@@ -204,7 +221,7 @@ export default function TestCards() {
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center bg-zinc-100 dark:bg-[#0a0a0a] p-1 rounded-xl border border-zinc-200 dark:border-zinc-800">
                 <button onClick={() => setFormat('pipe')} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${format === 'pipe' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}>
-                   Raw Pipe
+                   Raw
                 </button>
                 <button onClick={() => setFormat('json')} className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${format === 'json' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}>
                   <FileJson className="size-3.5" /> JSON
@@ -224,7 +241,7 @@ export default function TestCards() {
                 }`}
               >
                 {copiedText ? <Check className="size-4" /> : <Copy className="size-4" />}
-                {copiedText ? 'Copied to Memory' : 'Copy Payload'}
+                {copiedText ? 'Copied' : 'Copy Payload'}
               </button>
             </div>
           </div>
