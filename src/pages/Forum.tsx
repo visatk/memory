@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { MessageSquarePlus, MessageCircle, Search, Flame, Eye, LockKeyhole } from 'lucide-react';
+import { MessageSquarePlus, MessageCircle, Search, Flame, Eye, LockKeyhole, Pin } from 'lucide-react';
 import { SeoHead } from '../components/SeoHead';
 import { useAuth } from '../context/AuthContext';
 
@@ -13,6 +13,8 @@ type Thread = {
   author: string;
   upvotes: number;
   views: number;
+  isPinned: boolean;
+  isLocked: boolean;
   createdAt: string;
 };
 
@@ -68,7 +70,6 @@ export default function Forum() {
           <p className="text-lg text-zinc-500 dark:text-zinc-400">Discover and discuss infrastructure patterns.</p>
         </div>
         
-        {/* Advanced Search */}
         <div className="w-full md:w-96 relative group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-zinc-400 group-focus-within:text-orange-500 transition-colors" />
           <input 
@@ -83,8 +84,6 @@ export default function Forum() {
 
       <div className="flex flex-col-reverse lg:grid lg:grid-cols-12 gap-8 items-start">
         <div className="w-full lg:col-span-8 space-y-6">
-          
-          {/* Category Filters */}
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
             {CATEGORIES.map(cat => (
               <button
@@ -101,7 +100,6 @@ export default function Forum() {
             ))}
           </div>
 
-          {/* Thread List */}
           <div className="space-y-4">
             {isLoading ? (
               Array.from({ length: 4 }).map((_, i) => (
@@ -117,10 +115,15 @@ export default function Forum() {
                 <Link 
                   key={thread.id} 
                   to={`/forum/${thread.id}`}
-                  className="group flex flex-col sm:flex-row gap-4 p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl hover:border-orange-500/50 hover:shadow-lg hover:shadow-orange-500/5 transition-all"
+                  className={`group flex flex-col sm:flex-row gap-4 p-6 bg-white dark:bg-zinc-900 border rounded-2xl transition-all ${
+                    thread.isPinned ? 'border-orange-500/30 bg-orange-50/30 dark:bg-orange-500/5 shadow-sm' : 'border-zinc-200 dark:border-zinc-800 hover:border-orange-500/50 hover:shadow-lg hover:shadow-orange-500/5'
+                  }`}
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
+                      {thread.isPinned && <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400"><Pin className="size-3" /> Pinned</span>}
+                      {thread.isLocked && <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-zinc-500"><LockKeyhole className="size-3" /> Locked</span>}
+                      
                       <span className="px-2.5 py-1 bg-orange-500/10 text-orange-600 dark:text-orange-400 text-[10px] font-bold uppercase tracking-wider rounded-md">
                         {thread.category}
                       </span>
@@ -132,7 +135,6 @@ export default function Forum() {
                     </div>
                   </div>
                   
-                  {/* Gamification / Stats Matrix */}
                   <div className="flex sm:flex-col justify-end sm:justify-center items-center gap-4 sm:gap-2 border-t sm:border-t-0 sm:border-l border-zinc-100 dark:border-zinc-800 pt-4 sm:pt-0 sm:pl-6 shrink-0">
                     <div className="flex items-center gap-1.5 text-orange-500 font-bold" title="Upvotes">
                       <Flame className="size-4" /> {thread.upvotes}
@@ -147,13 +149,12 @@ export default function Forum() {
           </div>
         </div>
 
-        {/* Dynamic Sidebar: Compose OR Auth Prompt */}
         <div className="w-full lg:col-span-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-sm lg:sticky lg:top-8">
           {user ? (
             <>
               <h3 className="font-bold text-lg flex items-center gap-2 mb-6"><MessageSquarePlus className="size-5 text-orange-500" /> Start Discussion</h3>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <select value={newThread.category} onChange={e => setNewThread({...newThread, category: e.target.value})} className="w-full bg-zinc-50 dark:bg-[#0a0a0a] border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500/50 capitalize">
+                <select value={newThread.category} onChange={e => setNewThread({...newThread, category: e.target.value})} className="w-full bg-zinc-50 dark:bg-[#0a0a0a] border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500/50 capitalize cursor-pointer">
                   {CATEGORIES.filter(c => c !== 'all').map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
                 <input required minLength={5} type="text" placeholder="Thread Title" value={newThread.title} onChange={e => setNewThread({...newThread, title: e.target.value})} className="w-full bg-zinc-50 dark:bg-[#0a0a0a] border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500/50" />
@@ -172,7 +173,6 @@ export default function Forum() {
             </div>
           )}
         </div>
-        
       </div>
     </div>
   );
