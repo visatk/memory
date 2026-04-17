@@ -10,7 +10,7 @@ import { hashPassword, verifyPassword } from '../utils/crypto';
 
 export type AuthEnv = {
   Bindings: { DB: D1Database; JWT_SECRET: string; };
-  Variables: { user: { id: number; username: string; exp: number; }; };
+  Variables: { user: { id: number; username: string; role: string; exp: number; }; };
 };
 
 export const authRouter = new Hono<AuthEnv>();
@@ -34,13 +34,12 @@ authRouter.get('/profile/:username', async (c) => {
   
   const user = await db.select({ 
     id: users.id, 
-    username: users.username, 
+    username: users.username,
+    role: users.role,
     createdAt: users.createdAt 
   }).from(users).where(eq(users.username, username)).get();
   
-  if (!user) {
-    return c.json({ error: 'User not found' }, 404);
-  }
+  if (!user) return c.json({ error: 'User not found' }, 404);
 
   const userThreads = await db.select()
     .from(threads)
@@ -48,18 +47,12 @@ authRouter.get('/profile/:username', async (c) => {
     .orderBy(desc(threads.createdAt))
     .limit(10);
   
-  const threadsCountResult = await db.select({ value: count() })
-    .from(threads).where(eq(threads.authorId, user.id)).get();
-    
-  const repliesCountResult = await db.select({ value: count() })
-    .from(replies).where(eq(replies.authorId, user.id)).get();
+  const threadsCountResult = await db.select({ value: count() }).from(threads).where(eq(threads.authorId, user.id)).get();
+  const repliesCountResult = await db.select({ value: count() }).from(replies).where(eq(replies.authorId, user.id)).get();
 
   return c.json({
     user,
-    stats: {
-      threads: threadsCountResult?.value || 0,
-      replies: repliesCountResult?.value || 0
-    },
+    stats: { threads: threadsCountResult?.value || 0, replies: repliesCountResult?.value || 0 },
     recentThreads: userThreads
   });
 });
@@ -76,16 +69,22 @@ authRouter.post('/register', zValidator('json', registerSchema), async (c) => {
     if (existingUsername) return c.json({ error: 'Username already taken' }, 400);
 
     const passwordHash = await hashPassword(password);
-    const newUser = await db.insert(users).values({ username, email, passwordHash }).returning();
     
-    const payload = { id: newUser[0].id, username: newUser[0].username, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7 };
+    // First user becomes admin automatically for development bootstrapping
+    const totalUsers = await db.select({ value: count() }).from(users).get();
+    const assignedRole = totalUsers?.value === 0 ? 'admin' : 'user';
+
+    const newUser = await db.insert(users).values({ 
+      username, email, passwordHash, role: assignedRole 
+    }).returning();
+    
+    const payload = { id: newUser[0].id, username: newUser[0].username, role: newUser[0].role, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7 };
     const token = await sign(payload, getSecret(c), 'HS256');
     
     setCookie(c, 'auth_token', token, { httpOnly: true, secure: true, sameSite: 'Strict', path: '/' });
-    return c.json({ id: newUser[0].id, username: newUser[0].username }, 201);
+    return c.json({ id: newUser[0].id, username: newUser[0].username, role: newUser[0].role }, 201);
   } catch (err: any) {
-    // Catch edge-case unique constraint breaches during execution
-    return c.json({ error: 'Registration failed due to a system constraint. Please try again.' }, 500);
+    return c.json({ error: 'Registration failed due to a system constraint.' }, 500);
   }
 });
 
@@ -98,11 +97,11 @@ authRouter.post('/login', zValidator('json', loginSchema), async (c) => {
     return c.json({ error: 'Invalid credentials' }, 401);
   }
 
-  const payload = { id: user.id, username: user.username, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7 };
+  const payload = { id: user.id, username: user.username, role: user.role, exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7 };
   const token = await sign(payload, getSecret(c), 'HS256');
   
   setCookie(c, 'auth_token', token, { httpOnly: true, secure: true, sameSite: 'Strict', path: '/' });
-  return c.json({ id: user.id, username: user.username });
+  return c.json({ id: user.id, username: user.username, role: user.role });
 });
 
 authRouter.post('/logout', (c) => {
@@ -114,8 +113,8 @@ authRouter.get('/me', async (c) => {
   const token = getCookie(c, 'auth_token');
   if (!token) return c.json({ user: null });
   try {
-    const decoded = await verify(token, getSecret(c), 'HS256') as { id: number; username: string; exp: number };
-    return c.json({ user: { id: decoded.id, username: decoded.username } });
+    const decoded = await verify(token, getSecret(c), 'HS256') as any;
+    return c.json({ user: { id: decoded.id, username: decoded.username, role: decoded.role } });
   } catch {
     return c.json({ user: null });
   }
