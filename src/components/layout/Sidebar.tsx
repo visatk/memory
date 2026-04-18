@@ -27,23 +27,34 @@ export function Sidebar() {
       
       {/* Navigation Links */}
       <div className="flex-1 overflow-auto py-4 custom-scrollbar">
-        <nav className="grid items-start px-2 text-sm font-medium lg:px-4 gap-1">
-          <div className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Utilities</div>
-          {utilities.map(({ to, icon: Icon, label }) => (
-            <NavLink key={to} to={to} className={({ isActive }) => `flex items-center gap-3 rounded-md px-3 py-2 transition-colors ${isActive ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50 font-medium' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50 font-medium'}`}>
-              <Icon className="h-4 w-4" /> 
-              {label}
-            </NavLink>
-          ))}
-          
-          <div className="px-2 py-2 mt-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Community</div>
-          {community.map(({ to, icon: Icon, label }) => (
-            <NavLink key={to} to={to} className={({ isActive }) => `flex items-center gap-3 rounded-md px-3 py-2 transition-colors ${isActive ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50 font-medium' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50 font-medium'}`}>
-              <Icon className="h-4 w-4" /> 
-              {label}
-            </NavLink>
-          ))}
-        </nav>
+        {/* Replace the navigation block inside Sidebar.tsx with this logic */}
+<nav className="grid items-start px-2 text-sm font-medium lg:px-4 gap-1">
+  <div className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Utilities</div>
+  {utilities.map(({ to, icon: Icon, label, external }) => (
+    external ? (
+      <a key={to} href={to} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-md px-3 py-2 transition-colors text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50 font-medium">
+        <Icon className="h-4 w-4" /> {label}
+      </a>
+    ) : (
+      <NavLink key={to} to={to} className={({ isActive }) => `flex items-center gap-3 rounded-md px-3 py-2 transition-colors ${isActive ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50 font-medium' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50 font-medium'}`}>
+        <Icon className="h-4 w-4" /> {label}
+      </NavLink>
+    )
+  ))}
+  
+  <div className="px-2 py-2 mt-4 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Community</div>
+  {community.map(({ to, icon: Icon, label, external }) => (
+    external ? (
+      <a key={to} href={to} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-md px-3 py-2 transition-colors text-[#2AABEE] bg-[#2AABEE]/5 hover:bg-[#2AABEE]/15 font-bold border border-[#2AABEE]/10 mt-1">
+        <Icon className="h-4 w-4" /> {label}
+      </a>
+    ) : (
+      <NavLink key={to} to={to} className={({ isActive }) => `flex items-center gap-3 rounded-md px-3 py-2 transition-colors ${isActive ? 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50 font-medium' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50 font-medium'}`}>
+        <Icon className="h-4 w-4" /> {label}
+      </NavLink>
+    )
+  ))}
+</nav>
       </div>
 
       {/* Auth Footer */}
