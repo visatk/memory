@@ -109,7 +109,7 @@ toolsRouter.post('/generate-cards', zValidator('json', generateCardsSchema), (c)
 
 
 // ==========================================
-// 2. MOCK VERIFY GATEWAY SIMULATOR
+// 2. LIVE VERIFY GATEWAY (chkr.cc API Integration)
 // ==========================================
 
 const checkCardSchema = z.object({
@@ -117,47 +117,63 @@ const checkCardSchema = z.object({
 });
 
 /**
- * Mock Gateway Simulation
- * Evaluates the payload and simulates an acquirer response with realistic latencies.
+ * Live Gateway Check
+ * Proxies the request through Cloudflare Workers to bypass CORS and obscure the origin.
  */
 toolsRouter.post('/check-card', zValidator('json', checkCardSchema), async (c) => {
   const { cardPayload } = c.req.valid('json');
 
-  // Simulate network latency to a payment gateway (300ms to 1200ms)
-  const latency = Math.floor(Math.random() * 900) + 300;
-  await new Promise(resolve => setTimeout(resolve, latency));
+  try {
+    const response = await fetch("https://api.chkr.cc/", {
+      method: "POST",
+      headers: {
+        "accept": "application/json, text/javascript, */*; q=0.01",
+        "accept-language": "en-US,en;q=0.9",
+        "content-type": "application/json; charset=UTF-8",
+        "priority": "u=1, i",
+        "sec-ch-ua": "\"Not(A:Brand\";v=\"8\", \"Chromium\";v=\"144\", \"Google Chrome\";v=\"144\"",
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": "\"Windows\"",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-site",
+        "Referer": "https://chkr.cc/"
+      },
+      body: JSON.stringify({ data: cardPayload, charge: false })
+    });
 
-  // Determine mock response
-  // 15% Live, 5% Unknown, 80% Die (Standard QA distribution)
-  const rand = Math.random();
-  
-  let status: 'Live' | 'Die' | 'Unknown';
-  let message: string;
+    if (!response.ok) {
+      return c.json({ 
+        success: false, 
+        status: 'Unknown', 
+        message: `Upstream Gateway Error (${response.status})` 
+      });
+    }
 
-  if (rand < 0.15) {
-    status = 'Live';
-    message = 'Approved - 1000';
-  } else if (rand < 0.20) {
-    status = 'Unknown';
-    message = 'Issuer Unavailable';
-  } else {
-    status = 'Die';
-    // Randomize decline reasons for realism
-    const declineReasons = ['Declined - 51', 'Invalid Format', 'Expired Card', 'Suspected Fraud'];
-    message = declineReasons[Math.floor(Math.random() * declineReasons.length)];
+    const data = await response.json() as any;
+
+    // Map the external API status to our frontend's strongly typed CheckStatus
+    let status: 'Live' | 'Die' | 'Unknown' = 'Unknown';
+    if (data.status === 'Live') status = 'Live';
+    else if (data.status === 'Die') status = 'Die';
+
+    // Enhance the message by appending bank information if available
+    const bankInfo = data.card?.bank ? ` - ${data.card.bank}` : '';
+    const rawMessage = data.message || 'No response message';
+
+    return c.json({ 
+      success: true, 
+      status, 
+      message: `${rawMessage}${bankInfo}` 
+    });
+
+  } catch (error) {
+    return c.json({ 
+      success: false, 
+      status: 'Unknown', 
+      message: 'Network execution failed during upstream fetch' 
+    });
   }
-
-  // Hardcode failure for payloads containing formatting errors (like 'xxxxx')
-  if (cardPayload.toLowerCase().includes('x')) {
-    status = 'Die';
-    message = 'Invalid Format';
-  }
-
-  return c.json({ 
-    success: true, 
-    status, 
-    message 
-  });
 });
 
 
