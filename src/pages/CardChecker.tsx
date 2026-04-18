@@ -17,7 +17,6 @@ export default function CardChecker() {
   const [results, setResults] = useState<CheckedCard[]>([]);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   
-  // AbortController to cleanly halt the processing loop
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleStart = async () => {
@@ -62,6 +61,13 @@ export default function CardChecker() {
           time: Date.now() - startTime
         }, ...prev]);
       }
+
+      // CLIENT-SIDE THROTTLING: Wait between 1.2s and 2s before the next request
+      // This prevents the frontend from slamming the upstream API and triggering a 429 Error
+      if (i < cards.length - 1 && !abortControllerRef.current?.signal.aborted) {
+        const jitterDelay = Math.floor(Math.random() * 800) + 1200;
+        await new Promise(resolve => setTimeout(resolve, jitterDelay));
+      }
     }
 
     setIsChecking(false);
@@ -75,7 +81,6 @@ export default function CardChecker() {
   };
 
   useEffect(() => {
-    // Cleanup on unmount
     return () => {
       if (abortControllerRef.current) abortControllerRef.current.abort();
     };
@@ -99,10 +104,10 @@ export default function CardChecker() {
       
       <div className="mb-8 md:mb-10">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400 text-[11px] font-bold uppercase tracking-widest mb-4 shadow-sm">
-          <ShieldCheck className="size-3.5 fill-current" /> Gateway Simulation
+          <ShieldCheck className="size-3.5 fill-current" /> Live Verification Pipeline
         </div>
-        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-3">MockVerify Sandbox</h1>
-        <p className="text-lg text-zinc-500 dark:text-zinc-400">Process and analyze test payloads through simulated acquirer responses. Strictly for QA and development.</p>
+        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-3">Payload Verify Engine</h1>
+        <p className="text-lg text-zinc-500 dark:text-zinc-400">Process and analyze test payloads through live upstream networks.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -174,7 +179,6 @@ export default function CardChecker() {
         {/* Right Column: Statistics & Output */}
         <div className="lg:col-span-7 flex flex-col gap-6">
           
-          {/* Status Dashboards */}
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-2xl p-5 flex flex-col items-center justify-center text-center">
               <CheckCircle2 className="size-6 text-emerald-600 dark:text-emerald-400 mb-2" />
@@ -191,11 +195,10 @@ export default function CardChecker() {
             <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl p-5 flex flex-col items-center justify-center text-center">
               <HelpCircle className="size-6 text-amber-600 dark:text-amber-400 mb-2" />
               <span className="text-2xl font-black text-amber-700 dark:text-amber-400 leading-none mb-1">{stats.unknown}</span>
-              <span className="text-[10px] font-bold text-amber-600/70 dark:text-amber-400/70 uppercase tracking-widest">Unknown</span>
+              <span className="text-[10px] font-bold text-amber-600/70 dark:text-amber-400/70 uppercase tracking-widest">Unknown / 429</span>
             </div>
           </div>
 
-          {/* Results Log */}
           <div className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl overflow-hidden shadow-sm flex flex-col min-h-[400px]">
             <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-[#0a0a0a]/50">
               <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Verification Log</h3>
