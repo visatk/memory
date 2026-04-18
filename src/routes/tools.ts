@@ -4,6 +4,10 @@ import { z } from 'zod';
 
 export const toolsRouter = new Hono();
 
+// ==========================================
+// 1. GENERATE CARDS LOGIC
+// ==========================================
+
 const generateCardsSchema = z.object({
   bin: z.string()
     .min(1, "BIN must be provided")
@@ -101,4 +105,120 @@ toolsRouter.post('/generate-cards', zValidator('json', generateCardsSchema), (c)
     metadata: { baseBin, networkDetected: specs.network, vectorLength: specs.length },
     cards: generatedCards 
   });
+});
+
+
+// ==========================================
+// 2. MOCK VERIFY GATEWAY SIMULATOR
+// ==========================================
+
+const checkCardSchema = z.object({
+  cardPayload: z.string().min(5, "Payload too short")
+});
+
+/**
+ * Mock Gateway Simulation
+ * Evaluates the payload and simulates an acquirer response with realistic latencies.
+ */
+toolsRouter.post('/check-card', zValidator('json', checkCardSchema), async (c) => {
+  const { cardPayload } = c.req.valid('json');
+
+  // Simulate network latency to a payment gateway (300ms to 1200ms)
+  const latency = Math.floor(Math.random() * 900) + 300;
+  await new Promise(resolve => setTimeout(resolve, latency));
+
+  // Determine mock response
+  // 15% Live, 5% Unknown, 80% Die (Standard QA distribution)
+  const rand = Math.random();
+  
+  let status: 'Live' | 'Die' | 'Unknown';
+  let message: string;
+
+  if (rand < 0.15) {
+    status = 'Live';
+    message = 'Approved - 1000';
+  } else if (rand < 0.20) {
+    status = 'Unknown';
+    message = 'Issuer Unavailable';
+  } else {
+    status = 'Die';
+    // Randomize decline reasons for realism
+    const declineReasons = ['Declined - 51', 'Invalid Format', 'Expired Card', 'Suspected Fraud'];
+    message = declineReasons[Math.floor(Math.random() * declineReasons.length)];
+  }
+
+  // Hardcode failure for payloads containing formatting errors (like 'xxxxx')
+  if (cardPayload.toLowerCase().includes('x')) {
+    status = 'Die';
+    message = 'Invalid Format';
+  }
+
+  return c.json({ 
+    success: true, 
+    status, 
+    message 
+  });
+});
+
+
+// ==========================================
+// 3. STRIPE BIN LOOKUP PROXY
+// ==========================================
+
+const checkBinSchema = z.object({
+  bin: z.string()
+    .min(6, "BIN must be at least 6 digits")
+    .max(16)
+    .regex(/^[0-9]+$/, "BIN must contain only numbers")
+});
+
+/**
+ * Stripe Edge-Internal Proxy
+ * Safely fetches metadata without exposing CORS headers to the client.
+ */
+toolsRouter.post('/check-bin', zValidator('json', checkBinSchema), async (c) => {
+  const { bin } = c.req.valid('json');
+  
+  try {
+    // Utilize the Worker's global fetch API to act as a secure proxy
+    const response = await fetch(`https://api.stripe.com/edge-internal/card-metadata?bin_prefix=${bin}&key=pk_live_51HOrSwC6h1nxGoI3lTAgRjYVrz4dU3fVOabyCcKR3pbEJguCVAlqCxdxCUvoRh1XWwRacViovU3kLKvpkjh7IqkW00iXQsjo3n`, {
+      method: 'GET',
+      headers: {
+        "accept": "application/json",
+        "accept-language": "en-US,en;q=0.9",
+        "content-type": "application/x-www-form-urlencoded",
+        "priority": "u=1, i",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"Google Chrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": "\"Windows\"",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-site",
+        "Referer": "https://js.stripe.com/"
+      }
+    });
+
+    if (!response.ok) {
+      return c.json({ success: false, message: 'Failed to query upstream metadata provider' });
+    }
+
+    const data = await response.json() as any;
+    
+    if (data?.data && data.data.length > 0) {
+      const info = data.data[0];
+      return c.json({
+        success: true,
+        metadata: {
+          brand: info.brand || 'UNKNOWN',
+          country: info.country || 'UNKNOWN',
+          funding: info.funding || 'UNKNOWN',
+          pan_length: info.pan_length || 16
+        }
+      });
+    }
+
+    return c.json({ success: false, message: 'BIN not found in metadata registry' });
+  } catch (error) {
+    return c.json({ success: false, message: 'Network execution failed during upstream fetch' });
+  }
 });
