@@ -3,7 +3,8 @@ import { Layout } from './components/layout/Layout';
 import { AuthProvider } from './context/AuthContext';
 import TestCards from './pages/TestCards';
 import FakeAddress from './pages/FakeAddress';
-import CardChecker from './pages/CardChecker'; // <-- Import the new component
+import CardChecker from './pages/CardChecker';
+import BinChecker from './pages/BinChecker'; // <-- Import component
 import Forum from './pages/Forum';
 import Thread from './pages/Thread';
 import Login from './pages/Login';
@@ -18,7 +19,8 @@ export default function App() {
           <Route index element={<Forum />} />
           <Route path="test-cards" element={<TestCards />} />
           <Route path="fake-address" element={<FakeAddress />} />
-          <Route path="card-checker" element={<CardChecker />} /> {/* <-- Add Route */}
+          <Route path="card-checker" element={<CardChecker />} />
+          <Route path="bin-checker" element={<BinChecker />} /> {/* <-- Add Route */}
           <Route path="forum/:id" element={<Thread />} />
           <Route path="login" element={<Login />} />
           <Route path="register" element={<Register />} />
