@@ -15,6 +15,7 @@ type Thread = {
   views: number;
   isPinned: boolean;
   isLocked: boolean;
+  hasLockedContent: boolean;
   createdAt: string;
 };
 
@@ -26,7 +27,7 @@ export default function Forum() {
   const [activeCategory, setActiveCategory] = useState('all');
   
   const [isPosting, setIsPosting] = useState(false);
-  const [newThread, setNewThread] = useState({ title: '', content: '', category: 'general' });
+  const [newThread, setNewThread] = useState({ title: '', content: '', category: 'general', lockedContent: '', unlockCost: 0 });
 
   const fetchThreads = useCallback(() => {
     setIsLoading(true);
@@ -55,7 +56,7 @@ export default function Forum() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newThread)
     });
-    setNewThread({ title: '', content: '', category: 'general' });
+    setNewThread({ title: '', content: '', category: 'general', lockedContent: '', unlockCost: 0 });
     setIsPosting(false);
     fetchThreads();
   };
@@ -123,6 +124,7 @@ export default function Forum() {
                     <div className="flex items-center gap-3 mb-2">
                       {thread.isPinned && <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400"><Pin className="size-3" /> Pinned</span>}
                       {thread.isLocked && <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-zinc-500"><LockKeyhole className="size-3" /> Locked</span>}
+                      {thread.hasLockedContent && <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400"><LockKeyhole className="size-3" /> Premium</span>}
                       
                       <span className="px-2.5 py-1 bg-orange-500/10 text-orange-600 dark:text-orange-400 text-[10px] font-bold uppercase tracking-wider rounded-md">
                         {thread.category}
@@ -158,7 +160,19 @@ export default function Forum() {
                   {CATEGORIES.filter(c => c !== 'all').map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
                 <input required minLength={5} type="text" placeholder="Thread Title" value={newThread.title} onChange={e => setNewThread({...newThread, title: e.target.value})} className="w-full bg-zinc-50 dark:bg-[#0a0a0a] border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-orange-500/50" />
-                <textarea required minLength={10} rows={5} placeholder="Markdown supported..." value={newThread.content} onChange={e => setNewThread({...newThread, content: e.target.value})} className="w-full bg-zinc-50 dark:bg-[#0a0a0a] border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm outline-none resize-none focus:ring-2 focus:ring-orange-500/50 custom-scrollbar" />
+                <textarea required minLength={10} rows={4} placeholder="Public Content (Markdown supported)..." value={newThread.content} onChange={e => setNewThread({...newThread, content: e.target.value})} className="w-full bg-zinc-50 dark:bg-[#0a0a0a] border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm outline-none resize-none focus:ring-2 focus:ring-orange-500/50 custom-scrollbar" />
+                
+                {/* Premium Lock Block */}
+                <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                  <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 flex items-center gap-1"><LockKeyhole className="size-3" /> Premium Lock (Optional)</label>
+                  <textarea rows={3} placeholder="Hidden Content (Code snippets, links, etc)..." value={newThread.lockedContent} onChange={e => setNewThread({...newThread, lockedContent: e.target.value})} className="w-full bg-zinc-50 dark:bg-[#0a0a0a] border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm outline-none resize-none focus:ring-2 focus:ring-orange-500/50 custom-scrollbar mb-3" />
+                  <div className="flex items-center gap-3">
+                     <span className="text-sm font-medium text-zinc-500">Unlock Cost:</span>
+                     <input type="number" min="0" value={newThread.unlockCost} onChange={e => setNewThread({...newThread, unlockCost: parseInt(e.target.value) || 0})} className="w-24 bg-zinc-50 dark:bg-[#0a0a0a] border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:ring-2 focus:ring-orange-500/50" />
+                     <span className="text-xs text-zinc-400 font-medium">pts</span>
+                  </div>
+                </div>
+
                 <button disabled={isPosting || !newThread.title.trim()} className="w-full bg-zinc-900 hover:bg-orange-500 text-white dark:bg-zinc-100 dark:text-zinc-900 font-semibold py-4 rounded-xl transition-all disabled:opacity-50 cursor-pointer">
                   {isPosting ? 'Posting...' : 'Post Thread'}
                 </button>
