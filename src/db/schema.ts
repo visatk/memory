@@ -5,9 +5,12 @@ export const users = sqliteTable('users', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   username: text('username').notNull().unique(),
   email: text('email').notNull().unique(),
-  passwordHash: text('password_hash').notNull(),
+  passwordHash: text('password_hash'), // Nullable to support OAuth-only accounts
+  githubId: text('github_id').unique(), // Secure identity tracking for Social Login
   role: text('role', { enum: ['admin', 'moderator', 'user'] }).notNull().default('user'),
   points: integer('points').notNull().default(100), // 100 points sign-up bonus
+  isVerified: integer('is_verified', { mode: 'boolean' }).notNull().default(false),
+  verificationToken: text('verification_token'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
 });
 
