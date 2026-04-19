@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
 type UserRole = 'admin' | 'moderator' | 'user';
-type User = { id: number; username: string; role: UserRole } | null;
+type User = { id: number; username: string; role: UserRole; points: number } | null;
 
 interface AuthState {
   user: User;
