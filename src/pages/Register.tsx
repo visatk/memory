@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { UserPlus, Mail, Lock, User } from 'lucide-react';
+import { UserPlus, Mail, Lock, User, Github } from 'lucide-react';
 import { SeoHead } from '../components/SeoHead';
 import { useAuth } from '../context/AuthContext';
 
@@ -10,8 +10,16 @@ export default function Register() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const { refreshUser } = useAuth();
   const navigate = useNavigate();
+
+  // Catch OAuth Errors
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const err = params.get('error');
+    if (err) setError(decodeURIComponent(err.replace(/\+/g, ' ')));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,33 +30,52 @@ export default function Register() {
       const res = await fetch('/api/auth/register', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // FIX: Included 'username' in the payload
         body: JSON.stringify({ username, email, password }) 
       });
       
       const data = await res.json() as any;
       
       if (!res.ok) {
-        // FIX: Safely parse complex validation error objects from Zod
         let errMsg = 'Registration failed';
-        if (typeof data.error === 'string') {
-          errMsg = data.error;
-        } else if (data.error?.issues?.[0]?.message) {
-          errMsg = data.error.issues[0].message;
-        } else if (typeof data.error === 'object') {
-          errMsg = 'Invalid input provided';
-        }
+        if (typeof data.error === 'string') errMsg = data.error;
+        else if (data.error?.issues?.[0]?.message) errMsg = data.error.issues[0].message;
         throw new Error(errMsg);
       }
       
-      await refreshUser();
-      navigate('/');
+      if (data.requiresVerification) {
+        setIsSuccess(true);
+      } else {
+        await refreshUser();
+        navigate('/');
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (isSuccess) {
+    return (
+      <div className="flex items-center justify-center min-h-[70vh] p-4 animation-fade-in relative z-10">
+        <SeoHead title="Check Your Email" description="Verify your DevKit Pro account." />
+        <div className="w-full max-w-md bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 shadow-xl relative overflow-hidden text-center">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 to-amber-400"></div>
+          <div className="mx-auto size-16 bg-orange-500/10 rounded-2xl flex items-center justify-center mb-6 border border-orange-500/20">
+            <Mail className="size-8 text-orange-500" />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight mb-3">Check your email</h1>
+          <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-8 leading-relaxed">
+            We've sent a verification link to <span className="font-semibold text-zinc-900 dark:text-white">{email}</span>. 
+            Please click the link to activate your account.
+          </p>
+          <Link to="/login" className="inline-block w-full bg-zinc-900 hover:bg-orange-500 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-orange-500 dark:hover:text-white font-bold py-3.5 rounded-xl transition-all">
+            Return to Sign In
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-[70vh] p-4 animation-fade-in relative z-10">
@@ -66,6 +93,20 @@ export default function Register() {
         </div>
 
         {error && <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm rounded-xl text-center font-medium">{error}</div>}
+
+        <a href="/api/auth/github/login" className="w-full flex items-center justify-center gap-3 px-4 py-3.5 bg-[#24292F] hover:bg-[#24292F]/90 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 text-white rounded-xl transition-all font-bold shadow-md mb-6">
+          <Github className="size-5" />
+          Sign up with GitHub
+        </a>
+
+        <div className="relative mb-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-zinc-200 dark:border-zinc-800"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-3 bg-white dark:bg-zinc-900 text-zinc-400 font-medium tracking-wide uppercase text-[10px]">Or sign up with email</span>
+          </div>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
