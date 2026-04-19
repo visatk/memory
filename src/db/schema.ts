@@ -7,7 +7,7 @@ export const users = sqliteTable('users', {
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
   role: text('role', { enum: ['admin', 'moderator', 'user'] }).notNull().default('user'),
-  points: integer('points').notNull().default(100), // Sign-up bonus
+  points: integer('points').notNull().default(100), // 100 points sign-up bonus
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
 });
 
