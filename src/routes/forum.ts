@@ -56,7 +56,8 @@ forumRouter.get('/threads/:id', async (c) => {
   let currentUser = null;
   const token = getCookie(c, 'auth_token');
   if (token) {
-    try { currentUser = await verify(token, c.env.JWT_SECRET || 'super-secure-dev-secret-123') as any; } catch {}
+    // FIX: Pass 3 arguments to `verify`: token, secret, algorithm
+    try { currentUser = await verify(token, c.env.JWT_SECRET || 'super-secure-dev-secret-123', 'HS256') as any; } catch {}
   }
 
   let canViewLocked = false;
