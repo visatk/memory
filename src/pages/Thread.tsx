@@ -5,15 +5,21 @@ import { SeoHead } from '../components/SeoHead';
 import { useAuth } from '../context/AuthContext';
 
 type Reply = { id: number; content: string; author: string; upvotes: number; createdAt: string; };
-type ThreadDetail = { id: number; title: string; content: string; category: string; author: string; authorId: number; upvotes: number; views: number; isPinned: boolean; isLocked: boolean; createdAt: string; replies: Reply[]; };
+type ThreadDetail = { 
+  id: number; title: string; content: string; category: string; author: string; authorId: number; 
+  upvotes: number; views: number; isPinned: boolean; isLocked: boolean; createdAt: string; 
+  hasLockedContent?: boolean; lockedContent?: string; unlockCost?: number;
+  replies: Reply[]; 
+};
 
 export default function Thread() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [thread, setThread] = useState<ThreadDetail | null>(null);
   const [replyContent, setReplyContent] = useState('');
   const [isReplying, setIsReplying] = useState(false);
+  const [isUnlocking, setIsUnlocking] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const isModerator = user?.role === 'admin' || user?.role === 'moderator';
@@ -30,6 +36,10 @@ export default function Thread() {
 
   const handleVote = async (type: 'thread' | 'reply', targetId: number) => {
     if (!thread) return;
+    if (!user) {
+      alert("Please log in to vote.");
+      return;
+    }
     if (type === 'thread') {
       setThread({ ...thread, upvotes: thread.upvotes + 1 });
     } else {
@@ -52,6 +62,25 @@ export default function Thread() {
     if (res.ok) {
       const updated = await res.json() as ThreadDetail;
       setThread({ ...thread, isPinned: updated.isPinned, isLocked: updated.isLocked });
+    }
+  };
+
+  const handleUnlock = async () => {
+    if (!thread) return;
+    setIsUnlocking(true);
+    try {
+      const res = await fetch(`/api/forum/threads/${thread.id}/unlock`, { method: 'POST' });
+      const data = await res.json() as any;
+      if (data.success) {
+        setThread({ ...thread, lockedContent: data.lockedContent });
+        await refreshUser(); // Update global points balance in context
+      } else {
+        alert(data.error || 'Failed to unlock');
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsUnlocking(false);
     }
   };
 
@@ -121,14 +150,51 @@ export default function Thread() {
           <span className="font-bold text-lg text-zinc-900 dark:text-zinc-100">{thread.upvotes}</span>
         </div>
 
-        <div className="flex-1">
+        <div className="flex-1 w-full overflow-hidden">
           <div className="flex items-center gap-3 mb-4">
              {thread.isPinned && <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400"><Pin className="size-3" /> Pinned</span>}
              {thread.isLocked && <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400"><LockKeyhole className="size-3" /> Locked</span>}
+             {thread.hasLockedContent && <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400"><LockKeyhole className="size-3" /> Premium</span>}
              <span className="px-2.5 py-1 bg-orange-500/10 text-orange-600 text-[10px] font-bold uppercase tracking-wider rounded-md">{thread.category}</span>
           </div>
           <h1 className="text-2xl md:text-3xl font-bold mb-6 text-balance leading-tight">{thread.title}</h1>
-          <p className="text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed text-base">{thread.content}</p>
+          <p className="text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed text-base break-words">{thread.content}</p>
+          
+          {thread.hasLockedContent && (
+            <div className="mt-8 border border-orange-500/30 bg-orange-50/30 dark:bg-orange-500/10 rounded-2xl p-6 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
+              {thread.lockedContent ? (
+                <div>
+                  <h4 className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <LockKeyhole className="size-4" /> Unlocked Content
+                  </h4>
+                  <div className="bg-white/70 dark:bg-[#0a0a0a]/70 p-4 rounded-xl border border-orange-500/20 overflow-x-auto">
+                    <p className="text-zinc-800 dark:text-zinc-200 font-mono text-sm whitespace-pre-wrap break-all">{thread.lockedContent}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div>
+                    <h4 className="font-bold text-zinc-900 dark:text-white flex items-center gap-2"><LockKeyhole className="size-5 text-orange-500" /> Premium Content Locked</h4>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Unlock this payload using your community points.</p>
+                  </div>
+                  {user ? (
+                    <button 
+                      onClick={handleUnlock}
+                      disabled={isUnlocking}
+                      className="shrink-0 flex w-full sm:w-auto items-center justify-center gap-2 bg-zinc-900 hover:bg-orange-500 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-orange-500 dark:hover:text-white font-bold px-6 py-3 rounded-xl transition-all shadow-md cursor-pointer disabled:opacity-50"
+                    >
+                      {isUnlocking ? 'Processing...' : `Unlock (${thread.unlockCost} pts)`}
+                    </button>
+                  ) : (
+                    <Link to="/login" className="shrink-0 flex w-full sm:w-auto items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-bold px-6 py-3 rounded-xl transition-all shadow-md">
+                      Log In to Unlock
+                    </Link>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           
           <div className="mt-8 pt-5 border-t border-zinc-100 dark:border-zinc-800/50 flex flex-wrap items-center justify-between gap-4 text-xs font-medium">
             <div className="flex items-center gap-4 text-zinc-500">
@@ -146,8 +212,8 @@ export default function Thread() {
         <h3 className="font-bold text-xl flex items-center gap-2 mb-6 ml-2"><MessageCircle className="size-5 text-zinc-400" /> {thread.replies.length} Replies</h3>
         {thread.replies.map(reply => (
           <div key={reply.id} className="bg-white/50 dark:bg-[#0a0a0a]/50 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 md:p-6 ml-0 md:ml-8 flex gap-4 transition-colors hover:border-zinc-300 dark:hover:border-zinc-700">
-            <div className="flex-1">
-              <p className="text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap text-sm md:text-base leading-relaxed mb-4">{reply.content}</p>
+            <div className="flex-1 overflow-hidden">
+              <p className="text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap text-sm md:text-base leading-relaxed mb-4 break-words">{reply.content}</p>
               <div className="flex items-center gap-4 text-xs font-medium text-zinc-500 group">
                 <Link to={`/profile/${reply.author}`} className="flex items-center gap-1.5 hover:text-orange-500 transition-colors">
                   <User className="size-3.5 text-zinc-400 group-hover:text-orange-500 transition-colors" /> 
