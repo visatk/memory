@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { SeoHead } from '../components/SeoHead';
 import { useCopyToClipboard } from '../hooks/useCopyToClipboard';
-import { Copy, Check, Sparkles, Database, ShieldAlert, Code2, FileJson, FileText, CreditCard, Network, AlertCircle, Shield, Cpu, RefreshCw } from 'lucide-react';
+import { Copy, Check, Sparkles, Database, ShieldAlert, Code2, FileJson, FileText, CreditCard, Network, AlertCircle, Shield, Cpu, RefreshCw, HelpCircle } from 'lucide-react';
 
 const PRESET_BINS = [
   { name: 'Stripe Visa', bin: '424242' },
