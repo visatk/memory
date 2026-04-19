@@ -4,7 +4,7 @@ import { User, Calendar, MessageSquarePlus, MessageCircle, Flame } from 'lucide-
 import { SeoHead } from '../components/SeoHead';
 
 type ProfileData = {
-  user: { id: number; username: string; createdAt: string; };
+  user: { id: number; username: string; points: number; createdAt: string; };
   stats: { threads: number; replies: number; };
   recentThreads: { id: number; title: string; category: string; upvotes: number; createdAt: string; }[];
 };
@@ -20,12 +20,9 @@ export default function Profile() {
     
     setIsLoading(true);
     fetch(`/api/auth/profile/${username}`)
-      // FIX: Explicitly cast the JSON response so TypeScript knows what fields exist
       .then(res => res.json() as Promise<ProfileData & { error?: string }>)
       .then(data => {
         if (data.error) throw new Error(data.error);
-        
-        // FIX: Tell TypeScript this strictly matches ProfileData now that we passed the error check
         setProfile(data as ProfileData);
       })
       .catch((err: Error) => setError(err.message))
@@ -68,7 +65,14 @@ export default function Profile() {
           <Calendar className="size-4" /> Joined {new Date(profile.user.createdAt).toLocaleDateString()}
         </div>
         
-        <div className="flex gap-8 w-full max-w-md justify-center border-t border-zinc-100 dark:border-zinc-800/50 pt-8">
+        <div className="flex gap-6 md:gap-8 w-full max-w-lg justify-center border-t border-zinc-100 dark:border-zinc-800/50 pt-8">
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-2xl font-bold text-orange-500">{profile.user.points}</span>
+            <span className="text-xs text-zinc-500 uppercase tracking-wider font-bold flex items-center gap-1">
+              <Flame className="size-3.5" /> Rep Points
+            </span>
+          </div>
+          <div className="w-px bg-zinc-100 dark:bg-zinc-800"></div>
           <div className="flex flex-col items-center gap-1">
             <span className="text-2xl font-bold text-zinc-900 dark:text-white">{profile.stats.threads}</span>
             <span className="text-xs text-zinc-500 uppercase tracking-wider font-bold flex items-center gap-1">
