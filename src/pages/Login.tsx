@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogIn, Mail, Lock } from 'lucide-react';
+import { LogIn, Mail, Lock, Github } from 'lucide-react';
 import { SeoHead } from '../components/SeoHead';
 import { useAuth } from '../context/AuthContext';
 
@@ -11,6 +11,13 @@ export default function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { refreshUser } = useAuth();
   const navigate = useNavigate();
+
+  // Catch OAuth Errors from the Redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const err = params.get('error');
+    if (err) setError(decodeURIComponent(err.replace(/\+/g, ' ')));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,15 +34,9 @@ export default function Login() {
       const data = await res.json() as any;
       
       if (!res.ok) {
-        // FIX: Safely parse complex validation error objects from Zod
         let errMsg = 'Login failed';
-        if (typeof data.error === 'string') {
-          errMsg = data.error;
-        } else if (data.error?.issues?.[0]?.message) {
-          errMsg = data.error.issues[0].message;
-        } else if (typeof data.error === 'object') {
-          errMsg = 'Invalid credentials format';
-        }
+        if (typeof data.error === 'string') errMsg = data.error;
+        else if (data.error?.issues?.[0]?.message) errMsg = data.error.issues[0].message;
         throw new Error(errMsg);
       }
       
@@ -64,6 +65,20 @@ export default function Login() {
         </div>
 
         {error && <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm rounded-xl text-center font-medium">{error}</div>}
+
+        <a href="/api/auth/github/login" className="w-full flex items-center justify-center gap-3 px-4 py-3.5 bg-[#24292F] hover:bg-[#24292F]/90 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 text-white rounded-xl transition-all font-bold shadow-md mb-6">
+          <Github className="size-5" />
+          Continue with GitHub
+        </a>
+
+        <div className="relative mb-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-zinc-200 dark:border-zinc-800"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-3 bg-white dark:bg-zinc-900 text-zinc-400 font-medium tracking-wide uppercase text-[10px]">Or continue with email</span>
+          </div>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
