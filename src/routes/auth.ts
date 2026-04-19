@@ -36,6 +36,7 @@ authRouter.get('/profile/:username', async (c) => {
     id: users.id, 
     username: users.username,
     role: users.role,
+    points: users.points,
     createdAt: users.createdAt 
   }).from(users).where(eq(users.username, username)).get();
   
@@ -70,7 +71,6 @@ authRouter.post('/register', zValidator('json', registerSchema), async (c) => {
 
     const passwordHash = await hashPassword(password);
     
-    // First user becomes admin automatically for development bootstrapping
     const totalUsers = await db.select({ value: count() }).from(users).get();
     const assignedRole = totalUsers?.value === 0 ? 'admin' : 'user';
 
@@ -82,7 +82,7 @@ authRouter.post('/register', zValidator('json', registerSchema), async (c) => {
     const token = await sign(payload, getSecret(c), 'HS256');
     
     setCookie(c, 'auth_token', token, { httpOnly: true, secure: true, sameSite: 'Strict', path: '/' });
-    return c.json({ id: newUser[0].id, username: newUser[0].username, role: newUser[0].role }, 201);
+    return c.json({ id: newUser[0].id, username: newUser[0].username, role: newUser[0].role, points: newUser[0].points }, 201);
   } catch (err: any) {
     return c.json({ error: 'Registration failed due to a system constraint.' }, 500);
   }
@@ -101,7 +101,7 @@ authRouter.post('/login', zValidator('json', loginSchema), async (c) => {
   const token = await sign(payload, getSecret(c), 'HS256');
   
   setCookie(c, 'auth_token', token, { httpOnly: true, secure: true, sameSite: 'Strict', path: '/' });
-  return c.json({ id: user.id, username: user.username, role: user.role });
+  return c.json({ id: user.id, username: user.username, role: user.role, points: user.points });
 });
 
 authRouter.post('/logout', (c) => {
@@ -114,7 +114,11 @@ authRouter.get('/me', async (c) => {
   if (!token) return c.json({ user: null });
   try {
     const decoded = await verify(token, getSecret(c), 'HS256') as any;
-    return c.json({ user: { id: decoded.id, username: decoded.username, role: decoded.role } });
+    const db = drizzle(c.env.DB);
+    // Fetch fresh user data to ensure points are always synced
+    const user = await db.select({ id: users.id, username: users.username, role: users.role, points: users.points }).from(users).where(eq(users.id, decoded.id)).get();
+    if (!user) return c.json({ user: null });
+    return c.json({ user });
   } catch {
     return c.json({ user: null });
   }
