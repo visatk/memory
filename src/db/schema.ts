@@ -7,6 +7,7 @@ export const users = sqliteTable('users', {
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
   role: text('role', { enum: ['admin', 'moderator', 'user'] }).notNull().default('user'),
+  points: integer('points').notNull().default(100), // Sign-up bonus
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
 });
 
@@ -16,6 +17,8 @@ export const threads = sqliteTable('threads', {
   author: text('author').notNull(),
   title: text('title').notNull(),
   content: text('content').notNull(),
+  lockedContent: text('locked_content'), // Premium content hidden behind points
+  unlockCost: integer('unlock_cost').notNull().default(0), // Cost to unlock
   category: text('category').notNull().default('general'),
   upvotes: integer('upvotes').notNull().default(0),
   views: integer('views').notNull().default(0),
@@ -31,5 +34,13 @@ export const replies = sqliteTable('replies', {
   author: text('author').notNull(),
   content: text('content').notNull(),
   upvotes: integer('upvotes').notNull().default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+});
+
+// Registry to track which users have unlocked which threads
+export const threadUnlocks = sqliteTable('thread_unlocks', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  threadId: integer('thread_id').notNull().references(() => threads.id, { onDelete: 'cascade' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
 });
