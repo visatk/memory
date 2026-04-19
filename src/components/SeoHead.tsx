@@ -1,18 +1,25 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
+interface FAQ {
+  question: string;
+  answer: string;
+}
+
 interface SeoHeadProps {
   title: string;
   description: string;
+  keywords?: string;
   isTool?: boolean;
   image?: string;
+  faqData?: FAQ[];
 }
 
-export function SeoHead({ title, description, isTool = false, image = '/logo.svg' }: SeoHeadProps) {
+export function SeoHead({ title, description, keywords, isTool = false, image = '/logo.svg', faqData }: SeoHeadProps) {
   const location = useLocation();
   const baseUrl = 'https://visatk.us';
   const currentUrl = `${baseUrl}${location.pathname}`;
-  const siteName = 'Visatk';
+  const siteName = 'DevKit Pro';
   const fullTitle = isTool ? `${title} | ${siteName} Tools` : `${title} | ${siteName}`;
 
   useEffect(() => {
@@ -34,6 +41,7 @@ export function SeoHead({ title, description, isTool = false, image = '/logo.svg
 
     // Deep SEO Meta
     setMetaTag('meta[name="description"]', 'content', description);
+    if (keywords) setMetaTag('meta[name="keywords"]', 'content', keywords);
     setMetaTag('meta[name="robots"]', 'content', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1');
     
     // Canonical link
@@ -55,7 +63,6 @@ export function SeoHead({ title, description, isTool = false, image = '/logo.svg
 
     // Twitter Card
     setMetaTag('meta[name="twitter:card"]', 'content', 'summary_large_image');
-    setMetaTag('meta[name="twitter:url"]', 'content', currentUrl);
     setMetaTag('meta[name="twitter:title"]', 'content', fullTitle);
     setMetaTag('meta[name="twitter:description"]', 'content', description);
     setMetaTag('meta[name="twitter:image"]', 'content', `${baseUrl}${image}`);
@@ -69,14 +76,18 @@ export function SeoHead({ title, description, isTool = false, image = '/logo.svg
       document.head.appendChild(structuredData);
     }
     
-    const schema = isTool ? {
+    const schemas: any[] = [];
+
+    // Application Schema
+    schemas.push(isTool ? {
       "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
+      "@type": "WebApplication",
       "name": fullTitle,
       "description": description,
       "applicationCategory": "DeveloperApplication",
-      "operatingSystem": "Web",
+      "operatingSystem": "All",
       "url": currentUrl,
+      "offers": { "@type": "Offer", "price": "0.00", "priceCurrency": "USD" },
       "publisher": { "@type": "Organization", "name": siteName, "url": baseUrl }
     } : {
       "@context": "https://schema.org",
@@ -84,11 +95,27 @@ export function SeoHead({ title, description, isTool = false, image = '/logo.svg
       "name": siteName,
       "url": baseUrl,
       "description": description
-    };
-    
-    structuredData.textContent = JSON.stringify(schema);
+    });
 
-  }, [fullTitle, description, currentUrl, isTool, image, baseUrl]);
+    // FAQ Schema
+    if (faqData && faqData.length > 0) {
+      schemas.push({
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": faqData.map(faq => ({
+          "@type": "Question",
+          "name": faq.question,
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": faq.answer
+          }
+        }))
+      });
+    }
+    
+    structuredData.textContent = JSON.stringify(schemas.length === 1 ? schemas[0] : schemas);
+
+  }, [fullTitle, description, keywords, currentUrl, isTool, image, baseUrl, faqData]);
 
   return null;
 }
